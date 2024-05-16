@@ -1,1 +1,1 @@
-pub mod register;
+pub(crate) mod cpu;
