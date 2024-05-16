@@ -45,14 +45,14 @@ pub enum RSCmd {
     RLA,
     RRCA,
     RRA,
-    RLC(InputU8), // todo!("(HL) implementation")
-    RL(InputU8), // todo!("(HL) implementation")
-    RRC(InputU8), // todo!("(HL) implementation")
-    RR(InputU8), // todo!("(HL) implementation")
-    SLA(InputU8), // todo!("(HL) implementation")
-    SWAP(InputU8), // todo!("(HL) implementation")
-    SRA(InputU8), // todo!("(HL) implementation")
-    SRL(InputU8), // todo!("(HL) implementation")
+    RLC(DoubleInputU8), // todo!("(HL) implementation")
+    RL(DoubleInputU8), // todo!("(HL) implementation")
+    RRC(DoubleInputU8), // todo!("(HL) implementation")
+    RR(DoubleInputU8), // todo!("(HL) implementation")
+    SLA(DoubleInputU8), // todo!("(HL) implementation")
+    SWAP(DoubleInputU8), // todo!("(HL) implementation")
+    SRA(DoubleInputU8), // todo!("(HL) implementation")
+    SRL(DoubleInputU8), // todo!("(HL) implementation")
 }
 
 /// Single Bit Operation command set

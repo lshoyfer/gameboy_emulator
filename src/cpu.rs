@@ -21,8 +21,10 @@ struct CPU {
     bus: MemoryBus
 } 
 
+// DIRECT INSTRUCTION EXECUTION impl-block
 impl CPU {
-    fn execute(&mut self, instruction: Instruction) {
+    /// Executes a given CPU instruction
+    fn execute(&mut self, instruction: Instruction) -> u16 {
         match instruction {
             Instruction::Load8Bit(command) => {
                 match command {
@@ -54,6 +56,7 @@ impl CPU {
                                     RegisterU8::H => self.registers.a = self.add(self.registers.h),
                                     RegisterU8::L => self.registers.a = self.add(self.registers.l),
                                 }
+                                self.pc.wrapping_add(1)
                             }
                             CompoundInputU8::Immediate => todo!("immediate value // clock cycles // addressing & accessing system"),
                             CompoundInputU8::Address => todo!("addressing HL")
@@ -71,6 +74,7 @@ impl CPU {
                                     RegisterU8::H => self.registers.a = self.adc(self.registers.h),
                                     RegisterU8::L => self.registers.a = self.adc(self.registers.l),
                                 }
+                                self.pc.wrapping_add(1)
                            }
                             CompoundInputU8::Immediate => todo!("immediate value // clock cycles // addressing & accessing system"),
                             CompoundInputU8::Address => todo!("addressing HL")
@@ -88,6 +92,7 @@ impl CPU {
                                     RegisterU8::H => self.registers.a = self.sub(self.registers.h),
                                     RegisterU8::L => self.registers.a = self.sub(self.registers.l),
                                 }
+                                self.pc.wrapping_add(1)
                             }
                             CompoundInputU8::Immediate => todo!("immediate value // clock cycles // addressing & accessing system"),
                             CompoundInputU8::Address => todo!("addressing HL")
@@ -105,6 +110,7 @@ impl CPU {
                                     RegisterU8::H => self.registers.a = self.sbc(self.registers.h),
                                     RegisterU8::L => self.registers.a = self.sbc(self.registers.l),
                                 }
+                                self.pc.wrapping_add(1)
                             }
                             CompoundInputU8::Immediate => todo!("immediate value // clock cycles // addressing & accessing system"),
                             CompoundInputU8::Address => todo!("addressing HL")
@@ -122,6 +128,7 @@ impl CPU {
                                     RegisterU8::H => self.registers.a = self.and(self.registers.h),
                                     RegisterU8::L => self.registers.a = self.and(self.registers.l),
                                 }
+                                self.pc.wrapping_add(1)
                             }
                             CompoundInputU8::Immediate => todo!("immediate value // clock cycles // addressing & accessing system"),
                             CompoundInputU8::Address => todo!("addressing HL")
@@ -139,6 +146,7 @@ impl CPU {
                                     RegisterU8::H => self.registers.a = self.xor(self.registers.h),
                                     RegisterU8::L => self.registers.a = self.xor(self.registers.l),
                                 }
+                                self.pc.wrapping_add(1)
                             }
                             CompoundInputU8::Immediate => todo!("immediate value // clock cycles // addressing & accessing system"),
                             CompoundInputU8::Address => todo!("addressing HL")
@@ -156,6 +164,7 @@ impl CPU {
                                     RegisterU8::H => self.registers.a = self.or(self.registers.h),
                                     RegisterU8::L => self.registers.a = self.or(self.registers.l),
                                 }
+                                self.pc.wrapping_add(1)
                             }
                             CompoundInputU8::Immediate => todo!("immediate value // clock cycles // addressing & accessing system"),
                             CompoundInputU8::Address => todo!("addressing HL")
@@ -173,6 +182,7 @@ impl CPU {
                                     RegisterU8::H => self.cp(self.registers.h),
                                     RegisterU8::L => self.cp(self.registers.l),
                                 }
+                                self.pc.wrapping_add(1)
                             }
                             CompoundInputU8::Immediate => todo!("immediate value // clock cycles // addressing & accessing system"),
                             CompoundInputU8::Address => todo!("addressing HL")
@@ -211,6 +221,7 @@ impl CPU {
                                         self.inc_flags(self.registers.l);
                                     }
                                 }
+                                self.pc.wrapping_add(1)
                             }
                             CompoundInputU8::Immediate => unreachable!("Immediate (n) variant for INC instruction does not exist in the CPU spec."),
                             CompoundInputU8::Address => todo!("addressing HL")
@@ -249,6 +260,7 @@ impl CPU {
                                         self.dec_flags(self.registers.l);
                                     }
                                 }
+                                self.pc.wrapping_add(1)
                             }
                             CompoundInputU8::Immediate => unreachable!("Immediate (n) variant for DEC instruction does not exist in the CPU spec."),
                             CompoundInputU8::Address => todo!("addressing HL")
@@ -260,6 +272,7 @@ impl CPU {
                         // zero flag is not affected
                         self.registers.f.subtract = true;
                         self.registers.f.half_carry = true;
+                        self.pc.wrapping_add(1)
                     }
                 }
             }
@@ -269,15 +282,15 @@ impl CPU {
                     AritLogiU16Cmd::ADDHL(InputU16(target)) => {
                         match target {
                             RegisterU16::BC => {
-                                let sum = self.add_u16(self.registers.get_bc());
+                                let sum = self.addhl(self.registers.get_bc());
                                 self.registers.set_hl(sum);
                             },
                             RegisterU16::DE => {
-                                let sum = self.add_u16(self.registers.get_de());
+                                let sum = self.addhl(self.registers.get_de());
                                 self.registers.set_hl(sum);
                             }
                             RegisterU16::HL => {
-                                let sum = self.add_u16(self.registers.get_hl());
+                                let sum = self.addhl(self.registers.get_hl());
                                 self.registers.set_hl(sum);
                             }
                             RegisterU16::SP => todo!("Stack Pointer Implementation")
@@ -288,101 +301,163 @@ impl CPU {
                     AritLogiU16Cmd::ADDSP(InputI8(number)) => todo!("Stack Pointer Implementation"),
                     AritLogiU16Cmd::LD(InputI8(number)) => todo!("Implement"),
                 }
+                // all AritLogiU16Cmd variants are 1-byte wide commands so the PC-increment can go here as an umbrella/dedupe
+                self.pc.wrapping_add(1) 
             }
 
             Instruction::RotateShift(command) => {
                 match command {
-                    RSCmd::RLCA => self.registers.a = self.rlc(self.registers.a),
-                    RSCmd::RLA => self.registers.a = self.rl(self.registers.a),
-                    RSCmd::RRCA => self.registers.a = self.rrc(self.registers.a),
-                    RSCmd::RRA => self.registers.a = self.rr(self.registers.a),
-                    RSCmd::RLC(InputU8(target)) => {
-                        match target {
-                            RegisterU8::A => self.registers.a = self.rlc(self.registers.a),
-                            RegisterU8::B => self.registers.b = self.rlc(self.registers.b),
-                            RegisterU8::C => self.registers.c = self.rlc(self.registers.c),
-                            RegisterU8::D => self.registers.d = self.rlc(self.registers.d),
-                            RegisterU8::E => self.registers.e = self.rlc(self.registers.e),
-                            RegisterU8::H => self.registers.h = self.rlc(self.registers.h),
-                            RegisterU8::L => self.registers.l = self.rlc(self.registers.l),
-                        }
+                    RSCmd::RLCA => {
+                        self.registers.a = self.rlc(self.registers.a);
+                        self.pc.wrapping_add(1) 
                     }
-                    RSCmd::RL(InputU8(target)) => {
-                        match target {
-                            RegisterU8::A => self.registers.a = self.rl(self.registers.a),
-                            RegisterU8::B => self.registers.b = self.rl(self.registers.b),
-                            RegisterU8::C => self.registers.c = self.rl(self.registers.c),
-                            RegisterU8::D => self.registers.d = self.rl(self.registers.d),
-                            RegisterU8::E => self.registers.e = self.rl(self.registers.e),
-                            RegisterU8::H => self.registers.h = self.rl(self.registers.h),
-                            RegisterU8::L => self.registers.l = self.rl(self.registers.l),
-                        }
+                    RSCmd::RLA => { 
+                        self.registers.a = self.rl(self.registers.a);
+                        self.pc.wrapping_add(1) 
                     }
-                    RSCmd::RRC(InputU8(target)) => {
-                        match target {
-                            RegisterU8::A => self.registers.a = self.rrc(self.registers.a),
-                            RegisterU8::B => self.registers.b = self.rrc(self.registers.b),
-                            RegisterU8::C => self.registers.c = self.rrc(self.registers.c),
-                            RegisterU8::D => self.registers.d = self.rrc(self.registers.d),
-                            RegisterU8::E => self.registers.e = self.rrc(self.registers.e),
-                            RegisterU8::H => self.registers.h = self.rrc(self.registers.h),
-                            RegisterU8::L => self.registers.l = self.rrc(self.registers.l),
-                        }
+                    RSCmd::RRCA => {
+                        self.registers.a = self.rrc(self.registers.a);
+                        self.pc.wrapping_add(1) 
                     }
-                    RSCmd::RR(InputU8(target)) => {
-                        match target {
-                            RegisterU8::A => self.registers.a = self.rr(self.registers.a),
-                            RegisterU8::B => self.registers.b = self.rr(self.registers.b),
-                            RegisterU8::C => self.registers.c = self.rr(self.registers.c),
-                            RegisterU8::D => self.registers.d = self.rr(self.registers.d),
-                            RegisterU8::E => self.registers.e = self.rr(self.registers.e),
-                            RegisterU8::H => self.registers.h = self.rr(self.registers.h),
-                            RegisterU8::L => self.registers.l = self.rr(self.registers.l),
-                        }
+                    RSCmd::RRA => {
+                        self.registers.a = self.rr(self.registers.a);
+                        self.pc.wrapping_add(1) 
                     }
-                    RSCmd::SLA(InputU8(target)) => {
-                        match target {
-                            RegisterU8::A => self.registers.a = self.sla(self.registers.a),
-                            RegisterU8::B => self.registers.b = self.sla(self.registers.b),
-                            RegisterU8::C => self.registers.c = self.sla(self.registers.c),
-                            RegisterU8::D => self.registers.d = self.sla(self.registers.d),
-                            RegisterU8::E => self.registers.e = self.sla(self.registers.e),
-                            RegisterU8::H => self.registers.h = self.sla(self.registers.h),
-                            RegisterU8::L => self.registers.l = self.sla(self.registers.l),
+                    RSCmd::RLC(input) => {
+                        match input {
+                            DoubleInputU8::Register(target) => {
+                                match target {
+                                    RegisterU8::A => self.registers.a = self.rlc(self.registers.a),
+                                    RegisterU8::B => self.registers.b = self.rlc(self.registers.b),
+                                    RegisterU8::C => self.registers.c = self.rlc(self.registers.c),
+                                    RegisterU8::D => self.registers.d = self.rlc(self.registers.d),
+                                    RegisterU8::E => self.registers.e = self.rlc(self.registers.e),
+                                    RegisterU8::H => self.registers.h = self.rlc(self.registers.h),
+                                    RegisterU8::L => self.registers.l = self.rlc(self.registers.l),
+                                }
+                            }
+                            DoubleInputU8::Address => todo!("addressing HL")
                         }
+                        self.pc.wrapping_add(2) // all variants of DoubleInputU8 for RSCmds are prefixed
                     }
-                    RSCmd::SWAP(InputU8(target)) => {
-                        match target {
-                            RegisterU8::A => self.registers.a = self.swap(self.registers.a),
-                            RegisterU8::B => self.registers.b = self.swap(self.registers.b),
-                            RegisterU8::C => self.registers.c = self.swap(self.registers.c),
-                            RegisterU8::D => self.registers.d = self.swap(self.registers.d),
-                            RegisterU8::E => self.registers.e = self.swap(self.registers.e),
-                            RegisterU8::H => self.registers.h = self.swap(self.registers.h),
-                            RegisterU8::L => self.registers.l = self.swap(self.registers.l),
+                    RSCmd::RL(input) => {
+                        match input {
+                            DoubleInputU8::Register(target) => {
+                                match target {
+                                    RegisterU8::A => self.registers.a = self.rl(self.registers.a),
+                                    RegisterU8::B => self.registers.b = self.rl(self.registers.b),
+                                    RegisterU8::C => self.registers.c = self.rl(self.registers.c),
+                                    RegisterU8::D => self.registers.d = self.rl(self.registers.d),
+                                    RegisterU8::E => self.registers.e = self.rl(self.registers.e),
+                                    RegisterU8::H => self.registers.h = self.rl(self.registers.h),
+                                    RegisterU8::L => self.registers.l = self.rl(self.registers.l),
+                                }
+                            }
+                            DoubleInputU8::Address => todo!("addressing HL")
                         }
+                        self.pc.wrapping_add(2) // all variants of DoubleInputU8 for RSCmds are prefixed
                     }
-                    RSCmd::SRA(InputU8(target)) => {
-                        match target {
-                            RegisterU8::A => self.registers.a = self.sra(self.registers.a),
-                            RegisterU8::B => self.registers.b = self.sra(self.registers.b),
-                            RegisterU8::C => self.registers.c = self.sra(self.registers.c),
-                            RegisterU8::D => self.registers.d = self.sra(self.registers.d),
-                            RegisterU8::E => self.registers.e = self.sra(self.registers.e),
-                            RegisterU8::H => self.registers.h = self.sra(self.registers.h),
-                            RegisterU8::L => self.registers.l = self.sra(self.registers.l),
+                    RSCmd::RRC(input) => {
+                        match input {
+                            DoubleInputU8::Register(target) => {
+                                match target {
+                                    RegisterU8::A => self.registers.a = self.rrc(self.registers.a),
+                                    RegisterU8::B => self.registers.b = self.rrc(self.registers.b),
+                                    RegisterU8::C => self.registers.c = self.rrc(self.registers.c),
+                                    RegisterU8::D => self.registers.d = self.rrc(self.registers.d),
+                                    RegisterU8::E => self.registers.e = self.rrc(self.registers.e),
+                                    RegisterU8::H => self.registers.h = self.rrc(self.registers.h),
+                                    RegisterU8::L => self.registers.l = self.rrc(self.registers.l),
+                                }
+                            }
+                            DoubleInputU8::Address => todo!("addressing HL")
                         }
+                        self.pc.wrapping_add(2) // all variants of DoubleInputU8 for RSCmds are prefixed
                     }
-                    RSCmd::SRL(InputU8(target)) => {
-                        match target {
-                            RegisterU8::A => self.registers.a = self.srl(self.registers.a),
-                            RegisterU8::B => self.registers.b = self.srl(self.registers.b),
-                            RegisterU8::C => self.registers.c = self.srl(self.registers.c),
-                            RegisterU8::D => self.registers.d = self.srl(self.registers.d),
-                            RegisterU8::E => self.registers.e = self.srl(self.registers.e),
-                            RegisterU8::H => self.registers.h = self.srl(self.registers.h),
-                            RegisterU8::L => self.registers.l = self.srl(self.registers.l),
+                    RSCmd::RR(input) => {
+                        match input {
+                            DoubleInputU8::Register(target) => {
+                                match target {
+                                    RegisterU8::A => self.registers.a = self.rr(self.registers.a),
+                                    RegisterU8::B => self.registers.b = self.rr(self.registers.b),
+                                    RegisterU8::C => self.registers.c = self.rr(self.registers.c),
+                                    RegisterU8::D => self.registers.d = self.rr(self.registers.d),
+                                    RegisterU8::E => self.registers.e = self.rr(self.registers.e),
+                                    RegisterU8::H => self.registers.h = self.rr(self.registers.h),
+                                    RegisterU8::L => self.registers.l = self.rr(self.registers.l),
+                                }
+                            }
+                            DoubleInputU8::Address => todo!("addressing HL")
                         }
+                        self.pc.wrapping_add(2) // all variants of DoubleInputU8 for RSCmds are prefixed
+                    }
+                    RSCmd::SLA(input) => {
+                        match input {
+                            DoubleInputU8::Register(target) => {
+                                match target {
+                                    RegisterU8::A => self.registers.a = self.sla(self.registers.a),
+                                    RegisterU8::B => self.registers.b = self.sla(self.registers.b),
+                                    RegisterU8::C => self.registers.c = self.sla(self.registers.c),
+                                    RegisterU8::D => self.registers.d = self.sla(self.registers.d),
+                                    RegisterU8::E => self.registers.e = self.sla(self.registers.e),
+                                    RegisterU8::H => self.registers.h = self.sla(self.registers.h),
+                                    RegisterU8::L => self.registers.l = self.sla(self.registers.l),
+                                }
+                            }
+                            DoubleInputU8::Address => todo!("addressing HL")
+                        }
+                        self.pc.wrapping_add(2) // all variants of DoubleInputU8 for RSCmds are prefixed
+                    }
+                    RSCmd::SWAP(input) => {
+                        match input {
+                            DoubleInputU8::Register(target) => {
+                                match target {
+                                    RegisterU8::A => self.registers.a = self.swap(self.registers.a),
+                                    RegisterU8::B => self.registers.b = self.swap(self.registers.b),
+                                    RegisterU8::C => self.registers.c = self.swap(self.registers.c),
+                                    RegisterU8::D => self.registers.d = self.swap(self.registers.d),
+                                    RegisterU8::E => self.registers.e = self.swap(self.registers.e),
+                                    RegisterU8::H => self.registers.h = self.swap(self.registers.h),
+                                    RegisterU8::L => self.registers.l = self.swap(self.registers.l),
+                                }
+                            }
+                            DoubleInputU8::Address => todo!("addressing HL")
+                        }
+                        self.pc.wrapping_add(2) // all variants of DoubleInputU8 for RSCmds are prefixed
+                    }
+                    RSCmd::SRA(input) => {
+                        match input {
+                            DoubleInputU8::Register(target) => {
+                                match target {
+                                    RegisterU8::A => self.registers.a = self.sra(self.registers.a),
+                                    RegisterU8::B => self.registers.b = self.sra(self.registers.b),
+                                    RegisterU8::C => self.registers.c = self.sra(self.registers.c),
+                                    RegisterU8::D => self.registers.d = self.sra(self.registers.d),
+                                    RegisterU8::E => self.registers.e = self.sra(self.registers.e),
+                                    RegisterU8::H => self.registers.h = self.sra(self.registers.h),
+                                    RegisterU8::L => self.registers.l = self.sra(self.registers.l),
+                                }
+                            }
+                            DoubleInputU8::Address => todo!("addressing HL")
+                        }
+                        self.pc.wrapping_add(2) // all variants of DoubleInputU8 for RSCmds are prefixed
+                    }
+                    RSCmd::SRL(input) => {
+                        match input {
+                            DoubleInputU8::Register(target) => {
+                                match target {
+                                    RegisterU8::A => self.registers.a = self.srl(self.registers.a),
+                                    RegisterU8::B => self.registers.b = self.srl(self.registers.b),
+                                    RegisterU8::C => self.registers.c = self.srl(self.registers.c),
+                                    RegisterU8::D => self.registers.d = self.srl(self.registers.d),
+                                    RegisterU8::E => self.registers.e = self.srl(self.registers.e),
+                                    RegisterU8::H => self.registers.h = self.srl(self.registers.h),
+                                    RegisterU8::L => self.registers.l = self.srl(self.registers.l),
+                                }
+                            }
+                            DoubleInputU8::Address => todo!("addressing HL")
+                        }
+                        self.pc.wrapping_add(2) // all variants of DoubleInputU8 for RSCmds are prefixed
                     }
                 }
             }
@@ -423,6 +498,7 @@ impl CPU {
                         }
                     }
                 }
+                self.pc.wrapping_add(2) // all BitCmd variants are prefixed so the PC-increment can go here as an umbrella/dedupe
             }
 
             Instruction::Control(command) => {
@@ -432,12 +508,14 @@ impl CPU {
                         self.registers.f.subtract = false;
                         self.registers.f.half_carry = false;
                         self.registers.f.carry = !self.registers.f.carry;
+                        self.pc.wrapping_add(1)
                     }
                     CtrCmd::SCF => {
                         // zero flag not affected
                         self.registers.f.subtract = false;
                         self.registers.f.half_carry = false;
                         self.registers.f.carry = true;
+                        self.pc.wrapping_add(1)
                     }
                     CtrCmd::NOP => todo!("Implement"),
                     CtrCmd::HALT => todo!("Implement"),
@@ -470,7 +548,7 @@ impl CPU {
         sum
     }
 
-    fn add_u16(&mut self, value: u16) -> u16 {
+    fn addhl(&mut self, value: u16) -> u16 {
         let (sum, did_overflow) = self.registers.get_hl().overflowing_add(value);
         self.registers.f.zero = sum == 0;
         self.registers.f.subtract = false;
@@ -685,5 +763,30 @@ impl CPU {
         self.registers.f.carry = false;
 
         res
+    }
+}
+
+// MEMORY MANIPULATION / CPU-LOOP / ENCODING INSTRUCTIONS TO BE EXECUTED impl-block
+impl CPU {
+    fn step(&mut self) {
+        // todo!("cover all instruction reading styles")
+        let mut instruction_byte = self.bus.read_byte(self.pc); 
+        let prefixed = instruction_byte == 0xCB;
+        if prefixed {
+            instruction_byte = self.bus.read_byte(self.pc + 1);
+        }
+    
+        let next_pc = match Instruction::from_byte(instruction_byte, prefixed) {
+            Some(instruction) => self.execute(instruction),
+            None => {
+                panic!(
+                    "Unknown instruction received: 0x{}{:X}", 
+                    if prefixed { "CB" } else { "" },
+                    instruction_byte
+                )
+            }
+        };
+        
+        self.pc = next_pc;
     }
 }

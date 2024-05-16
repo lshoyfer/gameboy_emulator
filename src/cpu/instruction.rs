@@ -27,7 +27,7 @@ pub use commands::*;
 ///     An [`Instruction::Control`] can contain a [`CtrCmd`] of variant `NOP` which corresponds to the nop (no-op) CPU instruction
 ///     or perhaps an `EI` variant which corresponds to the ei CPU instruction which enables interrupts
 ///
-/// I could obviously flatten this for no change in functionality, but I accept this 
+/// I could flatten this for no change in functionality, but I accept this 
 /// level of nesting for organizational/reference purposes.
 pub enum Instruction {
     Load8Bit(LoadU8Cmd),
@@ -49,15 +49,22 @@ impl Instruction {
         }
     }
 
+    /// NOTE, only RotateShift & SingleBit contain prefixed commands
     pub fn from_byte_prefixed(byte: u8) -> Option<Self> {
         match byte {
-            
+/* START || Rotate & Shift Commands || START */
+            // todo!()
+/* END || Rotate & Shift Commands || END */
+
+/* START || Single Bit Operation Commands || START */
+            // todo!()
+/* END || Single Bit Operation Commands || END */
             _ => None // either unimplemented or unrecognized
         }
     }
 
     pub fn from_byte_not_prefixed(byte: u8) -> Option<Self> {
-        use crate::cpu::register::RegisterU8::{A, B, C, D, E, H, L};
+        use crate::cpu::register::RegisterU8::{ A, B, C, D, E, H, L };
         use crate::cpu::register::RegisterU16::{ BC, DE, HL, SP };
 
         /* Comment Guide (note it's not an exhaustive/perfectly enunciated syntax--
@@ -254,10 +261,11 @@ impl Instruction {
 
 /* START || Rotate & Shift Commands || START */
             // todo!()
+            // NOTE: MOST of these are prefixed
 /* END || Rotate & Shift Commands || END */
 
 /* START || Single Bit Operation Commands || START */
-            // todo!()
+            // NOTE: ALL of these are prefixed
 /* END || Single Bit Operation Commands || END */
 
 /* START || CPU Control Commands || START */
