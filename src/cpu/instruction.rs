@@ -81,8 +81,16 @@ impl Instruction {
                 cy := carry bit
         */
         match byte {
-        /* TODO STATUS: 8-bit Loads, 16-bit Loads, DAA, Most 16-bit Arithmetic, Rotates & Shifts, Bit Ops, CPU Control, Jumpcommands */
-        /* START || 8bit-Arithmetic/logical Commands || START */
+/* TODO STATUS: 8-bit Loads, 16-bit Loads, DAA, Most 16-bit Arithmetic, Rotates & Shifts, Bit Ops, CPU Control, Jumpcommands */
+/* START || 8-bit Load Commands || START */
+            // todo!()
+/* END || 8-bit Load Commands || END */
+
+/* START || 16-bit Load Commands || START */
+            // todo!()
+/* END || 16-bit Load Commands || END */
+
+/* START || 8bit-Arithmetic/logical Commands || START */
             /* STATUS: All enumerated. All done except for DAA. */
             // ADD A,r | 8x | 4 | z0hc | A=A+r
             0x87 => arithmetic_u8_impl!(AritLogiU8Cmd::ADD, CompoundInputU8::Register(A)),
@@ -215,9 +223,9 @@ impl Instruction {
             
             // CPL | 2F | 4 | -11- | A=!A aka A^0xFF
             0x2F => arithmetic_u8_impl!(AritLogiU8Cmd::CPL),
-        /* END || 8bit-Arithmetic/logical Commands || END */
+/* END || 8bit-Arithmetic/logical Commands || END */
 
-        /* START || 16bit-Arithmetic/logical Commands || START */
+/* START || 16bit-Arithmetic/logical Commands || START */
             /* STATUS: All enumerated. Most unimplemented. */
             // ADD HL,rr | x9 | 8 | -0hc | HL=HL+rr
             0x09 => arithmetic_u16_impl!(AritLogiU16Cmd::ADDHL, InputU16(BC)),
@@ -242,11 +250,26 @@ impl Instruction {
 
             // LD HL,SP+dd | F8 | 12 | 00hc | HL = SP +/- dd
             0xF8 => todo!("Implement LDHL"),
-        /* END || 16bit-Arithmetic/logical Commands || END */
+/* END || 16bit-Arithmetic/logical Commands || END */
+
+/* START || Rotate & Shift Commands || START */
+            // todo!()
+/* END || Rotate & Shift Commands || END */
+
+/* START || Single Bit Operation Commands || START */
+            // todo!()
+/* END || Single Bit Operation Commands || END */
+
+/* START || CPU Control Commands || START */
+            // todo!()
+/* END || CPU Control Commands || END */
+
+/* START || Jump Commands || START */
+            // todo!()
+/* END || Jump Commands || END */
 
             _ => None // either unimplemented or unrecognized
         }
     }
-
 
 }
