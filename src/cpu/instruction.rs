@@ -273,7 +273,20 @@ impl Instruction {
 /* END || CPU Control Commands || END */
 
 /* START || Jump Commands || START */
-            // todo!()
+            // JP nn | C3 nn nn | 16 | ---- | PC=nn
+            0xC3 => jump_impl!(JmpCmd::JP, JPInput::Direct),
+            // JP HL | E9 | 4 | ---- | PC=HL
+            0xE9 => jump_impl!(JmpCmd::JP, JPInput::HL),
+            // JP f,nn | xx nn nn | 16/12 | ---- | conditional
+            0xC2 => jump_impl!(JmpCmd::JP, JPInput::Conditional(JmpCmdCondition::NZ)),
+            0xCA => jump_impl!(JmpCmd::JP, JPInput::Conditional(JmpCmdCondition::Z)),
+            0xD2 => jump_impl!(JmpCmd::JP, JPInput::Conditional(JmpCmdCondition::NC)),
+            0xDA => jump_impl!(JmpCmd::JP, JPInput::Conditional(JmpCmdCondition::C)),
+
+            // JR 
+
+        
+        
 /* END || Jump Commands || END */
 
             _ => None // either unimplemented or unrecognized

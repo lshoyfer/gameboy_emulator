@@ -77,10 +77,10 @@ pub enum CtrCmd {
 
 pub enum JmpCmd {
     // todo!("Figure out inputs & implement")
-    JP(), // todo!()
-    JR(), // todo!()
-    CALL(), // todo!()
-    RET(), // todo!()
+    JP(JPInput),
+    JR(JmpCmdInput), 
+    CALL(JmpCmdInput), // todo!()
+    RET(JmpCmdInput), // todo!()
     RETI, // todo!()
     RST(), // todo!()
 }

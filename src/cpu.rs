@@ -1,3 +1,24 @@
+//! The GENERAL implementation structure in the CPU is:
+//! 
+//! The private util functions for operations change the f-registers appropriately
+//! and calculate whatever business logic is generally needed in a reusable format.
+//! Then, [`CPU::execute`] uses the utils where appropriate and updates whatever main data
+//! specific to that operation it had to update (usually the register the operation must put
+//! the result in) and then returns the appropriate next PCAddr. A notable exception
+//! to the PCAddr calculation & return placement is in the Jump Command utilities where
+//! the utils themselves return the proper PCAddr and [`CPU::execute`] immediately returns
+//! that value due to the Jump commands' main "business logic" basically being manipulating 
+//! the PC.
+//! 
+//! So in sum: 
+//! Utils calculate the business logic of an operation which includes setting appropriate 
+//! f-registers, [`CPU::execute`] uses the result of a util function appropriately and 
+//! returns the next PCAddr value for [`CPU::step`] to work with.
+//! 
+//! NOTE: not all operations havea utility function but are rather inlined directly. I may
+//! change this by making every operation have a utility function, and marking the util
+//! as inline where appropriate, but I am still debating this.
+
 mod register;
 mod instruction;
 
@@ -15,16 +36,17 @@ impl MemoryBus {
     }
 }
 
+type PCAddr = u16;
 struct CPU {
     registers: Registers,
-    pc: u16,
+    pc: PCAddr,
     bus: MemoryBus
 } 
 
 // DIRECT INSTRUCTION EXECUTION impl-block
 impl CPU {
     /// Executes a given CPU instruction
-    fn execute(&mut self, instruction: Instruction) -> u16 {
+    fn execute(&mut self, instruction: Instruction) -> PCAddr {
         match instruction {
             Instruction::Load8Bit(command) => {
                 match command {
@@ -525,12 +547,31 @@ impl CPU {
                 }
             }
             
+            // NOTE: Jump Commands return the next PC from the util functions / each arm
+            // and some mutate the SP as part of their "business logic"
             Instruction::Jump(command) => {
                 match command {
-                    JmpCmd::JP() => todo!("Design & Implement"),
-                    JmpCmd::JR() => todo!("Design & Implement"),
-                    JmpCmd::CALL() => todo!("Design & Implement"),
-                    JmpCmd::RET() => todo!("Design & Implement"),
+                    JmpCmd::JP(input) => {
+                        match input {
+                            JPInput::Direct => self.jump(true),
+                            JPInput::HL => self.registers.get_hl(),
+                            JPInput::Conditional(cond) => {
+                                let should_jump = self.check_cond(cond);
+                                self.jump(should_jump)
+                            }
+                        }
+                    }
+                    JmpCmd::JR(input) => {
+                        match input {
+                            JmpCmdInput::Direct => self.jump_relative(true),
+                            JmpCmdInput::Conditional(cond) => {
+                                let should_jump = self.check_cond(cond);
+                                self.jump_relative(should_jump)
+                            }
+                        }
+                    }
+                    JmpCmd::CALL(input) => todo!("Design & Implement"),
+                    JmpCmd::RET(input) => todo!("Design & Implement"),
                     JmpCmd::RETI => todo!("Implement"),
                     JmpCmd::RST() => todo!("Design & Implement"),
                 }
@@ -538,23 +579,12 @@ impl CPU {
         }
     }
 
+/* ArithmeticLogical8Bit Utils */
     fn add(&mut self, value: u8) -> u8 {
         let (sum, did_overflow) = self.registers.a.overflowing_add(value);
         self.registers.f.zero = sum == 0;
         self.registers.f.subtract = false;
         self.registers.f.half_carry = ((self.registers.a & 0xF) + (value & 0xF)) & 0x10 == 0x10;
-        self.registers.f.carry = did_overflow;
-
-        sum
-    }
-
-    fn addhl(&mut self, value: u16) -> u16 {
-        let (sum, did_overflow) = self.registers.get_hl().overflowing_add(value);
-        self.registers.f.zero = sum == 0;
-        self.registers.f.subtract = false;
-        /* the LR-CPU has a 4bit ALU, so I believe adding from least to most significant would
-           mean the half_carry reflects the upper byte, checking @ bit 11 & 12. */
-        self.registers.f.half_carry = ((self.registers.get_hl() & 0x0FFF) + (value & 0x0FFF)) & 0x1000 == 0x1000;
         self.registers.f.carry = did_overflow;
 
         sum
@@ -655,6 +685,20 @@ impl CPU {
         // carry flag is not affected
     }
 
+/* ArithmeticLogical16Bit Utils */
+    fn addhl(&mut self, value: u16) -> u16 {
+        let (sum, did_overflow) = self.registers.get_hl().overflowing_add(value);
+        self.registers.f.zero = sum == 0;
+        self.registers.f.subtract = false;
+        /* the LR-CPU has a 4bit ALU, so I believe adding from least to most significant would
+           mean the half_carry reflects the upper byte, checking @ bit 11 & 12. */
+        self.registers.f.half_carry = ((self.registers.get_hl() & 0x0FFF) + (value & 0x0FFF)) & 0x1000 == 0x1000;
+        self.registers.f.carry = did_overflow;
+
+        sum
+    }
+
+/* SingleBit Utils */ 
     fn bit(&mut self, bit: u8, value: u8) {
         self.registers.f.zero = (value & (0b1 << bit)) == 0;
         self.registers.f.subtract = false;
@@ -680,6 +724,7 @@ impl CPU {
         // all flags are not affected
     }
 
+/* RotateShift Utils */
     fn srl(&mut self, value: u8) -> u8 {
         let res = value >> 1;
         self.registers.f.zero = res == 0;
@@ -764,6 +809,46 @@ impl CPU {
 
         res
     }
+
+/* Jump Utils */
+    fn check_cond(&self, cond: JmpCmdCondition) -> bool {
+        match cond {
+            JmpCmdCondition::NZ => !self.registers.f.zero,
+            JmpCmdCondition::Z => self.registers.f.zero,
+            JmpCmdCondition::NC => !self.registers.f.carry,
+            JmpCmdCondition::C => !self.registers.f.carry,
+        }
+    }
+    
+    // CPU is Little-Endian
+    fn jump(&mut self, should_jump: bool) -> PCAddr {
+        if should_jump {
+            let least_significant_byte = self.bus.read_byte(self.pc + 1) as u16;
+            let most_significant_byte = self.bus.read_byte(self.pc + 2) as u16;
+            (most_significant_byte << 8) | least_significant_byte
+        } else {
+            // JP nn is 3-bytes wide (OPCODE | ADDR_LEAST_SIG_BYTE | ADDR_MOST_SIG_BYTE)
+            self.pc.wrapping_add(3)
+        }
+    }
+
+    fn jump_relative(&mut self, should_jump: bool) -> PCAddr {
+        if should_jump {
+            // offset is signed
+            let offset = self.bus.read_byte(self.pc + 1) as i8; 
+            // todo!("verify if i should wrap this or if this will never actually wrap in proper JR calls")
+            if offset >= 0 {
+                self.pc.wrapping_add(offset as u16)
+            } else {
+                self.pc.wrapping_sub((offset as i16).abs() as u16)
+            }
+        } else {
+            // JR dd is 2-bytes wide (OPCODE | RELATIVE_BYTE)
+            self.pc.wrapping_add(2)
+        }
+    }
+
+    
 }
 
 // MEMORY MANIPULATION / CPU-LOOP / ENCODING INSTRUCTIONS TO BE EXECUTED impl-block
@@ -790,3 +875,4 @@ impl CPU {
         self.pc = next_pc;
     }
 }
+

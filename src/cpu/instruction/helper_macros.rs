@@ -1,10 +1,10 @@
 //! This module contains helper macros specifically used in the 
 //! implementation of the [Instruction] enum of the  [`crate::cpu::instruction`] module
 //! 
-//! [Instruction]: crate::cpu::instruction::InstructionType
+//! [Instruction]: crate::cpu::instruction::Instruction
 
 macro_rules! arithmetic_u8_impl {
-    ($cmd:path, $input:expr) => {
+($cmd:path, $input:expr) => {
         Some(
             Instruction::ArithmeticLogical8Bit(
                 $cmd($input)
@@ -37,5 +37,16 @@ macro_rules! arithmetic_u16_impl {
     }
 }
 
+macro_rules! jump_impl {
+    ($cmd:path, $input:expr) => {
+        Some(
+            Instruction::Jump(
+                $cmd($input)
+            )
+        )
+    };
+}
+
 pub(super) use arithmetic_u8_impl;
 pub(super) use arithmetic_u16_impl;
+pub(super) use jump_impl;
