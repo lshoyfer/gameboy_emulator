@@ -15,7 +15,7 @@
 //! f-registers, [`CPU::execute`] uses the result of a util function appropriately and 
 //! returns the next PCAddr value for [`CPU::step`] to work with.
 //! 
-//! NOTE: not all operations havea utility function but are rather inlined directly. I may
+//! NOTE: not all operations have a utility function but are rather inlined directly. I may
 //! change this by making every operation have a utility function, and marking the util
 //! as inline where appropriate, but I am still debating this.
 
@@ -31,14 +31,25 @@ struct MemoryBus {
 }
 
 impl MemoryBus {
+    #[inline]
     fn read_byte(&self, address: u16) -> u8 {
         self.memory[address as usize]
     }
+    #[inline]
+    fn borrow_byte(&self, address: u16) -> &u8 {
+        &self.memory[address as usize]
+    }
+    #[inline]
+    fn borrow_byte_mut(&mut self, address: u16) -> &mut u8 {
+        &mut self.memory[address as usize]
+    }
 }
 
+/// 2-byte unsigned value representing the PC's value
 type PCAddr = u16;
 struct CPU {
     registers: Registers,
+    /// Program Counter
     pc: PCAddr,
     bus: MemoryBus
 } 
@@ -49,10 +60,110 @@ impl CPU {
     fn execute(&mut self, instruction: Instruction) -> PCAddr {
         match instruction {
             Instruction::Load8Bit(command) => {
+                /* NOTE ON POINTER ARITHMETIC/IMPLEMENTATION OF LOADS
+                    I refuse to enumerate all registers with a match on all of these arms but I
+                    may in the future (I'll need to measure performance/memory etc)
+                    but for now the implementation is done with pointer arithmetic on the Registers
+                    struct to access the field containing the proper register dynamically
+                    in an efficient manner. The RegisterU8 enum encodes in its variants'
+                    numerical values the offset of where the respective register is relative
+                    to the struct's starting address and as such is what is used in the arithmetic
+                    as seen in the ptr.add(r/r1/r2 as usize) type operations.
+                */
                 match command {
-                    LoadU8Cmd::LD => todo!("Implement loads"),
-                    LoadU8Cmd::LDI => todo!("Implement loads"),
-                    LoadU8Cmd::LDD => todo!("Implement loads"),
+                    LoadU8Cmd::LD(input) => {
+                        match input {
+                            LDInputU8::RR(r1, r2) => {
+                                let p_registers = &mut self.registers as *mut Registers as *mut u8;
+
+                                // SAFETY: Relies on invariants outlined in comments throughout the [`register`]
+                                // module that guarantee these fields are next to each other in memory and that the
+                                // u8 value of the variants of the RegisterU8 enum correspond to a proper ptr offset
+                                // for their respective fields.
+                                unsafe { *p_registers.add(r1 as usize) = *p_registers.add(r2 as usize); }
+                                self.pc.wrapping_add(1)
+                            }
+                            LDInputU8::RI(r) => {
+                                let p_registers = &mut self.registers as *mut Registers as *mut u8;
+
+                                // SAFETY: see LDInputU8::RR execution (first arm in this match statement) comments
+                                unsafe { *p_registers.add(r as usize) = self.read_immediate_u8(); }
+                                self.pc.wrapping_add(2)
+                            }
+                            LDInputU8::RHL(r) => {
+                                let p_registers = &mut self.registers as *mut Registers as *mut u8;
+
+                                // SAFETY: see LDInputU8::RR execution (first arm in this match statement) comments
+                                unsafe { *p_registers.add(r as usize) = self.bus.read_byte(self.registers.get_hl()); }
+                                self.pc.wrapping_add(1)
+                            }
+                            LDInputU8::HLR(r) => {
+                                let p_registers = &mut self.registers as *mut Registers as *mut u8;
+
+                                // SAFETY: see LDInputU8::RR execution (first arm in this match statement) comments
+                                unsafe { *self.bus.borrow_byte_mut(self.registers.get_hl()) = *p_registers.add(r as usize); }
+                                self.pc.wrapping_add(1)
+                            }
+                            LDInputU8::HLI => {
+                                *self.bus.borrow_byte_mut(self.registers.get_hl()) = self.read_immediate_u8();
+                                self.pc.wrapping_add(2)
+                            }
+                            LDInputU8::ABC => {
+                                self.registers.a = self.bus.read_byte(self.registers.get_bc());
+                                self.pc.wrapping_add(1)
+                            }
+                            LDInputU8::ADE => {
+                                self.registers.a = self.bus.read_byte(self.registers.get_de());
+                                self.pc.wrapping_add(1)
+                            }
+                            LDInputU8::AII => {
+                                self.registers.a = self.bus.read_byte(self.read_immediate_u16());
+                                self.pc.wrapping_add(3)
+                            }
+                            LDInputU8::BCA => {
+                                *self.bus.borrow_byte_mut(self.registers.get_bc()) = self.registers.a;
+                                self.pc.wrapping_add(1)
+                            }
+                            LDInputU8::DEA => {
+                                *self.bus.borrow_byte_mut(self.registers.get_de()) = self.registers.a;
+                                self.pc.wrapping_add(1)
+                            }
+                            LDInputU8::IIA => {
+                                *self.bus.borrow_byte_mut(self.read_immediate_u16()) = self.registers.a;
+                                self.pc.wrapping_add(3)
+                            }
+                            // todo!("io-ports aren't yet implemented/designed/considered")
+                            LDInputU8::ReadIoN() | LDInputU8::WriteIoN() | LDInputU8::ReadIoC() | LDInputU8::WriteIoC() => unimplemented!("io-ports")
+                        }
+                    }
+                    LoadU8Cmd::LDI(input) => {
+                        match input {
+                            LDIInputU8::HLA => {
+                                *self.bus.borrow_byte_mut(self.registers.get_hl()) = self.registers.a;
+                                self.registers.set_hl(self.registers.get_hl().wrapping_add(1));
+                                self.pc.wrapping_add(1)
+                            }
+                            LDIInputU8::AHL => {
+                                self.registers.a = self.bus.read_byte(self.registers.get_hl());
+                                self.registers.set_hl(self.registers.get_hl().wrapping_add(1));
+                                self.pc.wrapping_add(1)
+                            }
+                        }
+                    }
+                    LoadU8Cmd::LDD(input) => {
+                        match input {
+                            LDDInputU8::HLA => {
+                                *self.bus.borrow_byte_mut(self.registers.get_hl()) = self.registers.a;
+                                self.registers.set_hl(self.registers.get_hl().wrapping_sub(1));
+                                self.pc.wrapping_add(1)
+                            }
+                            LDDInputU8::AHL => {
+                                self.registers.a = self.bus.read_byte(self.registers.get_hl());
+                                self.registers.set_hl(self.registers.get_hl().wrapping_sub(1));
+                                self.pc.wrapping_add(1)
+                            }
+                        }
+                    }
                 }
             }
 
@@ -874,5 +985,20 @@ impl CPU {
         
         self.pc = next_pc;
     }
+
+    /// Reads the byte immediately after the opcode in memory.
+    #[inline]
+    fn read_immediate_u8(&self) -> u8 {
+        self.bus.read_byte(self.pc.wrapping_add(2))
+    }
+
+    /// Reads the next two bytes immediately after the opcode in memory as a u16.
+    /// Used for CPU commands that are 3-bytes wide.
+    #[inline]
+    fn read_immediate_u16(&self) -> u16 {
+        (self.read_immediate_u8() as u16) // LS-byte first
+        | ((self.bus.read_byte(self.pc.wrapping_add(3)) as u16) << 8) // MS-byte last
+    }
+
 }
 

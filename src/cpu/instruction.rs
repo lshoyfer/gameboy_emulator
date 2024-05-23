@@ -75,7 +75,7 @@ impl Instruction {
             R := register the operation is affecting, usually A, sometimes HL, sometimes custom 8 or 16 bit
             _ := input (actually generally just a piece of the opcode, 
             not quite an "input" in the traditional sense), where possible inputs are
-                r := a register;
+                r := a register
                 rr := 16 bit compound register (BC, DE, HL, SP (Stack Pointer))
                 n/nn := immediate value
                 (HL) := the value at the address in compound 16bit register HL (deref of HL -- *HL)
@@ -90,7 +90,107 @@ impl Instruction {
         match byte {
 /* TODO STATUS: 8-bit Loads, 16-bit Loads, DAA, Most 16-bit Arithmetic, Rotates & Shifts, Bit Ops, CPU Control, Jumpcommands */
 /* START || 8-bit Load Commands || START */
-            // todo!()
+            // LD r,r | xx | 4 | ---- | r=r
+                /* A,r | 7x */
+            0x7F => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::RR(A, A)),
+            0x78 => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::RR(A, B)),
+            0x79 => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::RR(A, C)),
+            0x7A => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::RR(A, D)),
+            0x7B => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::RR(A, E)),
+            0x7C => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::RR(A, H)),
+            0x7D => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::RR(A, L)),
+                /* B, r | 4x */
+            0x40 => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::RR(B, B)),
+            0x41 => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::RR(B, C)),
+            0x42 => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::RR(B, D)),
+            0x43 => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::RR(B, E)),
+            0x44 => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::RR(B, H)),
+            0x45 => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::RR(B, L)),
+                /* C, r | 4x */
+            0x48 => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::RR(C, B)),
+            0x49 => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::RR(C, C)),
+            0x4A => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::RR(C, D)),
+            0x4B => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::RR(C, E)),
+            0x4C => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::RR(C, H)),
+            0x4D => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::RR(C, L)),
+                /* D, r | 5x */
+            0x50 => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::RR(D, B)),
+            0x51 => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::RR(D, C)),
+            0x52 => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::RR(D, D)),
+            0x53 => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::RR(D, E)),
+            0x54 => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::RR(D, H)),
+            0x55 => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::RR(D, L)),
+                /* E, r | 5x */
+            0x58 => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::RR(E, B)),
+            0x59 => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::RR(E, C)),
+            0x5A => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::RR(E, D)),
+            0x5B => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::RR(E, E)),
+            0x5C => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::RR(E, H)),
+            0x5D => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::RR(E, L)),
+                /* H, r | 6x */
+            0x60 => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::RR(H, B)),
+            0x61 => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::RR(H, C)),
+            0x62 => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::RR(H, D)),
+            0x63 => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::RR(H, E)),
+            0x64 => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::RR(H, H)),
+            0x65 => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::RR(H, L)),
+                /* L, r | 6x */
+            0x68 => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::RR(L, B)),
+            0x69 => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::RR(L, C)),
+            0x6A => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::RR(L, D)),
+            0x6B => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::RR(L, E)),
+            0x6C => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::RR(L, H)),
+            0x6D => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::RR(L, L)),
+            // LD r,n | xx nn | 8 | ---- | r=n
+            0x3E => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::RI(A)),
+            0x06 => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::RI(B)),
+            0x0E => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::RI(C)),
+            0x16 => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::RI(D)),
+            0x1E => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::RI(E)),
+            0x26 => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::RI(H)),
+            0x2E => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::RI(L)),
+            // LD r,(HL) | xx | 8 | ---- | r=(HL)
+            0x7E => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::RHL(A)),
+            0x46 => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::RHL(B)),
+            0x4E => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::RHL(C)),
+            0x56 => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::RHL(D)),
+            0x5E => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::RHL(E)),
+            0x66 => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::RHL(H)),
+            0x6E => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::RHL(L)),
+            // LD (HL),r | 7x | 8 | ---- | (HL)=r
+            0x70 => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::HLR(B)),
+            0x71 => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::HLR(C)),
+            0x72 => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::HLR(D)),
+            0x73 => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::HLR(E)),
+            0x74 => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::HLR(H)),
+            0x75 => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::HLR(L)),
+            // LD (HL),n | 36 nn | 12 | ---- | (HL)=n
+            0x36 => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::HLI),
+            // LD A,(BC) | 0A | 8 | ---- | A=(BC)
+            0x0A => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::ABC),
+            // LD A,(DE) | 1A | 8 | ---- | A=(DE)
+            0x1A => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::ADE),
+            // LD A,(nn) | 1A | 16 | ---- | A=(nn)
+            0xFA => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::AII),
+            // LD (BC),A | 02 | 8 | ---- | (BC)=A
+            0x02 => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::BCA),
+            // LD (DE),A | 12 | 8 | ---- | (DE)=A
+            0x12 => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::DEA),
+            // LD (nn),A | EA | 16 | ---- | (nn)=A
+            0xEA => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::IIA),
+        // todo!("IO-Port Loads")
+
+            // LDI (HL),A | 22 | 8 | ---- | (HL)=A; HL=HL+1
+            0x22 => load_u8_impl!(LoadU8Cmd::LDI, LDIInputU8::HLA),
+            // LDI A,(HL) | 2A | 8 | ---- | A=(HL); HL=HL+1
+            0x2A => load_u8_impl!(LoadU8Cmd::LDI, LDIInputU8::AHL),
+
+            // LDD (HL),A | 32 | 8 | ---- | (HL)=A; HL=HL-1
+            0x32 => load_u8_impl!(LoadU8Cmd::LDD, LDDInputU8::HLA),
+            // LDD A,(HL) | 3A | 8 | ---- | A=(HL); HL=HL-1
+            0x3A => load_u8_impl!(LoadU8Cmd::LDD, LDDInputU8::AHL),
+
+
 /* END || 8-bit Load Commands || END */
 
 /* START || 16-bit Load Commands || START */

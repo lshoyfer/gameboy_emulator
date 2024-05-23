@@ -1,3 +1,4 @@
+
 use super::*;
 
 #[test]
@@ -61,4 +62,23 @@ fn two_byte_set_and_get_hl() {
     assert_eq!(0b0000_0111_0000_1000, reg.get_hl());
     reg.set_hl(0x0AF7);
     assert_eq!(0x0AF7, reg.get_hl());
+}
+
+// todo!("Test this on multiple platforms/look into this more.")
+#[test]
+fn alignment_and_padding_of_registers() {
+    assert_eq!(
+        std::mem::size_of::<Registers>(), 
+        11, 
+        "Test has failed for the byte size of Registers which is expected to be 7 bytes (from registers a b c d e l) + 4 bytes 
+        (the flag register 'f' which internally keeps a bool (1-byte in memory) for each of the 4 flags) for 11 bytes total"
+    );
+    assert_eq!(
+        std::mem::align_of::<Registers>(),
+        1,
+        "Test has failed for the alignment of Registers, which imposes some SERIOUS problems due to how loads are implemented with ptr arithmetic.
+        If this fails it is likely a platform specific incurred error. The alignment is expected to be 1 byte because each field of
+        the Registers struct is 1 byte except for the f-field which holds a FlagRegister struct, which holds 4 bool fields, each a byte, so it itself
+        is 1-byte aligned, therefore if all of Registers fields are 1-byte aligned, Registers is 1-byte aligned/there is no padding required."
+    );
 }

@@ -1,10 +1,11 @@
 use super::input::*;
+// todo!("figure out why tf this works if mod input is private and im reexporting from super lmao")
 
 /// Load U8 command set
 pub enum LoadU8Cmd {
-    LD, // todo!("Implement & also figure out input structure -- this one has a lot of variants"),
-    LDI, // todo!("Implement & also figure out input structure")
-    LDD, // todo!("Implement & also figure out input structure")
+    LD(LDInputU8), // todo!("Implement io-port loads")
+    LDI(LDIInputU8), // todo!("Implement & also figure out input structure")
+    LDD(LDDInputU8), // todo!("Implement & also figure out input structure")
 }
 
 /// Load U16 command set

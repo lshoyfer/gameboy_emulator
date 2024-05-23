@@ -32,7 +32,7 @@ pub struct InputI8(pub i8);
 
 /// For [`JmpCmd::JP`] which has an input with 3 possible variations
 /// 
-/// [`JmpCmd::JP`]: super::commands::JmpCmd::JP
+/// [`JmpCmd::JP`]: super::JmpCmd::JP
 pub enum JPInput {
     /// Jump to the address immediately given in the next two bytes of memory
     Direct,
@@ -41,6 +41,8 @@ pub enum JPInput {
     /// Conditionally jump to the address immediately given in the next two bytes of memory
     Conditional(JmpCmdCondition)
 }
+
+// todo!("consider type alaising JmpCmdInput for diff cmds like you did for loads")
 
 /// For all variants of [`JmpCmd`] with inputs containing 2 possible variations. 
 ///
@@ -80,3 +82,68 @@ pub enum JmpCmdCondition {
     /// do Direct operation if carry-flag is set
     C
 }
+
+/// For [`LoadU8Cmd::LD`] which is the most versatile CPU command.
+/// 
+/// Note, in online documentation of this CPU, parentheses around something
+/// usually means deref of an address but here I'm using * for deref and
+/// parentheses just for visual clarity of the items/relationships
+/// involved in these LD inputs and also for normal prose additions.
+/// 
+/// Also note, 2-byte immediate values are LSByte first then MSByte in 
+/// the memory bus.
+/// 
+/// [`LoadU8Cmd::LD`]: super::LoadU8Cmd::LD
+pub enum LDInputU8 {
+    /// Load into a (Register) from a (Register)
+    RR(RegisterU8, RegisterU8),
+    /// Load into a (Register) from an (Immediate) 1-byte value
+    RI(RegisterU8),
+    /// Load into a (Register) from (*HL)
+    RHL(RegisterU8),
+    /// Load into (*HL) from a (Register)
+    HLR(RegisterU8),
+    /// Load into (*HL) from an (Immediate) 1-byte value
+    HLI,
+    /// Load into register (A) from (*BC)
+    ABC,
+    /// Load into register (A) from (*DE)
+    ADE,
+    /// Load into register (A) from (*nn) (deref of 2-byte immediate value)
+    AII,
+    /// Load into (*BC) from register (A)
+    BCA,
+    /// Load into (*DE) from register (A)
+    DEA,
+    /// Load into (*nn) (deref of 2-byte immediate value) from register (A)
+    IIA, 
+
+// todo!("io-ports aren't yet implemented/designed/considered")
+// START IO-ports
+    /// Load into register (A) from (IO-port N) (0xFFF0+n)
+    ReadIoN(),
+    /// Load into (IO-port N) (0xFFF0+n) from register (A)
+    WriteIoN(),
+
+    /// Load into register (A) from (IO-port C) (0xFFF0+C)
+    ReadIoC(),
+    /// Load into (IO-port C) (0xFFF0+C) from register (A)
+    WriteIoC()
+// END IO-ports
+}
+
+/// For [`LoadU8Cmd::LDI`] and [`LoadU8Cmd::LDD`] which have identical input variants
+/// 
+/// [`LoadU8Cmd::LDI`]: super::LoadU8Cmd::LDI
+/// [`LoadU8Cmd::LDD`]: super::LoadU8Cmd::LDD
+pub enum LDIncDecInputU8 {
+    /// Load into (*HL) from register (A) and increment (LDI) or decrement (LDD) register (HL) 
+    HLA,
+    /// Load into register (A) from (*HL) and increment (LDI) or decrement (LDD) register (HL) 
+    AHL
+}
+
+/// Type alias for LDI of [`LDIncDecInputU8`]
+pub type LDIInputU8 = LDIncDecInputU8;
+/// Type alias for LDD of [`LDIncDecInputU8`]
+pub type LDDInputU8 = LDIncDecInputU8;
