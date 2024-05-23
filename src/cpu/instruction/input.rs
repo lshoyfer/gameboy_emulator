@@ -24,7 +24,7 @@ pub enum DoubleInputU8 {
 pub struct InputU8(pub RegisterU8);
 
 /// For 16-bit Operations that only take basic register manipulation inputs 
-/// NOTE: 16-bit Ops only take register inputs
+/// NOTE: 16-bit Ops only take register inputs (if they do take any special inputs at all, that is)
 pub struct InputU16(pub RegisterU16);
 
 /// 8-bit Signed Number Input tho tbh idk where it comes from so this may be removed, I gotta figure it out
@@ -90,7 +90,7 @@ pub enum JmpCmdCondition {
 /// parentheses just for visual clarity of the items/relationships
 /// involved in these LD inputs and also for normal prose additions.
 /// 
-/// Also note, 2-byte immediate values are LSByte first then MSByte in 
+/// Also note, 2-byte immediate values are LS-Byte first then MS-Byte in 
 /// the memory bus.
 /// 
 /// [`LoadU8Cmd::LD`]: super::LoadU8Cmd::LD
@@ -147,3 +147,21 @@ pub enum LDIncDecInputU8 {
 pub type LDIInputU8 = LDIncDecInputU8;
 /// Type alias for LDD of [`LDIncDecInputU8`]
 pub type LDDInputU8 = LDIncDecInputU8;
+
+/// For [`LoadU16Cmd::LD`].
+/// 
+/// Note, in online documentation of this CPU, parentheses around something
+/// usually means deref of an address but here I'm using * for deref and
+/// parentheses just for visual clarity of the items/relationships
+/// involved in these LD inputs and also for normal prose additions.
+/// 
+/// Also note, 2-byte immediate values are LS-Byte first then MS-Byte in 
+/// the memory bus.
+/// 
+/// [`LoadU16Cmd::LD`]: super::LoadU16Cmd::LD
+pub enum LDInputU16 {
+    /// Load into (*rr) from (*nn)
+    RRNN(RegisterU16),
+    /// Load into direct SP from direct HL; (note the lack of deref/parenthesis)
+    SPHL
+}

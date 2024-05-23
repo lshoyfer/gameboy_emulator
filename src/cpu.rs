@@ -35,13 +35,8 @@ impl MemoryBus {
     fn read_byte(&self, address: u16) -> u8 {
         self.memory[address as usize]
     }
-    #[inline]
-    fn borrow_byte(&self, address: u16) -> &u8 {
-        &self.memory[address as usize]
-    }
-    #[inline]
-    fn borrow_byte_mut(&mut self, address: u16) -> &mut u8 {
-        &mut self.memory[address as usize]
+    fn write_byte(&mut self, address: u16, value: u8) {
+        self.memory[address as usize] = value;
     }
 }
 
@@ -51,6 +46,8 @@ struct CPU {
     registers: Registers,
     /// Program Counter
     pc: PCAddr,
+    /// Stack Pointer
+    sp: u16,
     bus: MemoryBus
 } 
 
@@ -69,6 +66,12 @@ impl CPU {
                     numerical values the offset of where the respective register is relative
                     to the struct's starting address and as such is what is used in the arithmetic
                     as seen in the ptr.add(r/r1/r2 as usize) type operations.
+
+                    For the 16-bit load, I used a match statement because there are only
+                    3 commands that matchh all registers and there are only 4 registers there, as
+                    opposed to here where there are 4 variations of the LD that work on 7 registers and
+                    LDInputU8::RR is especially egregious as it enumerates the set { (r1, r2) | r1, r2 ∈ r and r1 <= r2 }
+                    which has a length of 28 ((7*(7+1))/2)
                 */
                 match command {
                     LoadU8Cmd::LD(input) => {
@@ -101,11 +104,11 @@ impl CPU {
                                 let p_registers = &mut self.registers as *mut Registers as *mut u8;
 
                                 // SAFETY: see LDInputU8::RR execution (first arm in this match statement) comments
-                                unsafe { *self.bus.borrow_byte_mut(self.registers.get_hl()) = *p_registers.add(r as usize); }
+                                unsafe { self.bus.write_byte(self.registers.get_hl(), *p_registers.add(r as usize)) }
                                 self.pc.wrapping_add(1)
                             }
                             LDInputU8::HLI => {
-                                *self.bus.borrow_byte_mut(self.registers.get_hl()) = self.read_immediate_u8();
+                                self.bus.write_byte(self.registers.get_hl(), self.read_immediate_u8());
                                 self.pc.wrapping_add(2)
                             }
                             LDInputU8::ABC => {
@@ -121,15 +124,15 @@ impl CPU {
                                 self.pc.wrapping_add(3)
                             }
                             LDInputU8::BCA => {
-                                *self.bus.borrow_byte_mut(self.registers.get_bc()) = self.registers.a;
+                                self.bus.write_byte(self.registers.get_bc(), self.registers.a);
                                 self.pc.wrapping_add(1)
                             }
                             LDInputU8::DEA => {
-                                *self.bus.borrow_byte_mut(self.registers.get_de()) = self.registers.a;
+                                self.bus.write_byte(self.registers.get_de(), self.registers.a);
                                 self.pc.wrapping_add(1)
                             }
                             LDInputU8::IIA => {
-                                *self.bus.borrow_byte_mut(self.read_immediate_u16()) = self.registers.a;
+                                self.bus.write_byte(self.read_immediate_u16(), self.registers.a);
                                 self.pc.wrapping_add(3)
                             }
                             // todo!("io-ports aren't yet implemented/designed/considered")
@@ -140,9 +143,10 @@ impl CPU {
                                 self.pc.wrapping_add(2)
                             },
                             LDInputU8::WriteIoN => {
-                                *self.bus.borrow_byte_mut(
-                                    0xFF00 + (self.read_immediate_u8() as u16)
-                                ) = self.registers.a;
+                                self.bus.write_byte(
+                                    0xFF00 + (self.read_immediate_u8() as u16),
+                                    self.registers.a
+                                );
                                 self.pc.wrapping_add(2)
                             }
                             LDInputU8::ReadIoC => {
@@ -152,9 +156,10 @@ impl CPU {
                                 self.pc.wrapping_add(1)
                             }
                             LDInputU8::WriteIoC => {
-                                *self.bus.borrow_byte_mut(
-                                    0xFF00 + (self.registers.c as u16)
-                                ) = self.registers.a;
+                                self.bus.write_byte(
+                                    0xFF00 + (self.registers.c as u16),
+                                    self.registers.a
+                                );
                                 self.pc.wrapping_add(1)
                             }
                         }
@@ -162,7 +167,7 @@ impl CPU {
                     LoadU8Cmd::LDI(input) => {
                         match input {
                             LDIInputU8::HLA => {
-                                *self.bus.borrow_byte_mut(self.registers.get_hl()) = self.registers.a;
+                                self.bus.write_byte(self.registers.get_hl(), self.registers.a);
                                 self.registers.set_hl(self.registers.get_hl().wrapping_add(1));
                                 self.pc.wrapping_add(1)
                             }
@@ -176,7 +181,7 @@ impl CPU {
                     LoadU8Cmd::LDD(input) => {
                         match input {
                             LDDInputU8::HLA => {
-                                *self.bus.borrow_byte_mut(self.registers.get_hl()) = self.registers.a;
+                                self.bus.write_byte(self.registers.get_hl(), self.registers.a);
                                 self.registers.set_hl(self.registers.get_hl().wrapping_sub(1));
                                 self.pc.wrapping_add(1)
                             }
@@ -192,9 +197,46 @@ impl CPU {
 
             Instruction::Load16Bit(command) => {
                 match command {
-                    LoadU16Cmd::LD => todo!("Implement loads"),
-                    LoadU16Cmd::PUSH => todo!("Implement loads"),
-                    LoadU16Cmd::POP => todo!("Implement loads"),
+                    LoadU16Cmd::LD(input) => {
+                        match input {
+                            LDInputU16::RRNN(rr) => {
+                                match rr {
+                                    RegisterU16::BC => self.registers.set_bc(self.read_immediate_u16()),
+                                    RegisterU16::DE => self.registers.set_de(self.read_immediate_u16()),
+                                    RegisterU16::HL => self.registers.set_hl(self.read_immediate_u16()),
+                                    RegisterU16::SP => self.sp = self.read_immediate_u16(),
+                                    RegisterU16::AF => unreachable!("LD rr,nn doesn't operate on the AF register -- it is not a valid input type")
+                                }
+                                self.pc.wrapping_add(3)
+                            }
+                            LDInputU16::SPHL => {
+                                self.sp = self.registers.get_hl();
+                                self.pc.wrapping_add(1)
+                            }
+                        }
+                    }
+                    LoadU16Cmd::PUSH(InputU16(rr)) => {
+                        match rr {
+                            RegisterU16::AF => self.push(self.registers.get_af()),
+                            RegisterU16::BC => self.push(self.registers.get_bc()),
+                            RegisterU16::DE => self.push(self.registers.get_de()),
+                            RegisterU16::HL => self.push(self.registers.get_hl()),
+                            RegisterU16::SP => unreachable!("PUSH rr doesn't operate on the SP as an input type")
+                        }
+                        self.pc.wrapping_add(1)
+                    }
+                    LoadU16Cmd::POP(InputU16(rr)) => {
+                        // todo!("Does POP mess with the flags? What does (AF) mean in the spec?")
+                        let result = self.pop();
+                        match rr {
+                            RegisterU16::AF => self.registers.set_af(result),
+                            RegisterU16::BC => self.registers.set_bc(result),
+                            RegisterU16::DE => self.registers.set_de(result),
+                            RegisterU16::HL => self.registers.set_hl(result),
+                            RegisterU16::SP => unreachable!("POP rr doesn't operate on the SP as an input type")
+                        }
+                        self.pc.wrapping_add(1)
+                    }
                 }
             }
 
@@ -449,7 +491,8 @@ impl CPU {
                                 let sum = self.addhl(self.registers.get_hl());
                                 self.registers.set_hl(sum);
                             }
-                            RegisterU16::SP => todo!("Stack Pointer Implementation")
+                            RegisterU16::SP => todo!("Stack Pointer Implementation"),
+                            RegisterU16::AF => unreachable!("ADDHL doesn't operate on the AF register -- it is not a valid input"),
                         }
                     }
                     AritLogiU16Cmd::INC(InputU16(target)) => todo!("Implement"),
@@ -1023,5 +1066,23 @@ impl CPU {
         | ((self.bus.read_byte(self.pc.wrapping_add(3)) as u16) << 8) // MS-byte last
     }
 
-}
+    /// Handles Stack Pointer PUSH operation logic
+    fn push(&mut self, value: u16) {
+        self.sp = self.sp.wrapping_sub(1);
+        self.bus.write_byte(self.sp, (value >> 8) as u8);
 
+        self.sp = self.sp.wrapping_sub(1);
+        self.bus.write_byte(self.sp, value as u8);
+    }
+
+    /// Handles Stack Pointer POP operation logic
+    fn pop(&mut self) -> u16 {
+        self.sp = self.sp.wrapping_add(1);
+        let ls_byte = self.bus.read_byte(self.sp) as u16;
+
+        self.sp = self.sp.wrapping_add(1);
+        let ms_byte = (self.bus.read_byte(self.sp)) as u16;
+
+        (ms_byte << 8) | ls_byte
+    }
+}

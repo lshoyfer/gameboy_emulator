@@ -16,6 +16,8 @@ use helper_macros::*;
 pub use input::*;
 pub use commands::*;
 
+use crate::cpu::RegisterU16;
+
 
 
 
@@ -65,7 +67,7 @@ impl Instruction {
 
     pub fn from_byte_not_prefixed(byte: u8) -> Option<Self> {
         use crate::cpu::register::RegisterU8::{ A, B, C, D, E, H, L };
-        use crate::cpu::register::RegisterU16::{ BC, DE, HL, SP };
+        use crate::cpu::register::RegisterU16::{ BC, DE, HL, SP, AF };
 
         /* Comment Guide (note it's not an exhaustive/perfectly enunciated syntax--
             --i.e. use some intuition/critical thinking on some outside the exact format :P) */
@@ -89,7 +91,7 @@ impl Instruction {
                 cy := carry bit
         */
         match byte {
-/* TODO STATUS: 8-bit Loads, 16-bit Loads, DAA, Most 16-bit Arithmetic, Rotates & Shifts, Bit Ops, CPU Control, Jumpcommands */
+/* TODO STATUS: 16-bit Loads, DAA, Most 16-bit Arithmetic, Rotates & Shifts, Bit Ops, CPU Control, Jumpcommands */
 /* START || 8-bit Load Commands || START */
             // LD r,r | xx | 4 | ---- | r=r
                 /* A,r | 7x */
@@ -198,12 +200,29 @@ impl Instruction {
             0x32 => load_u8_impl!(LoadU8Cmd::LDD, LDDInputU8::HLA),
             // LDD A,(HL) | 3A | 8 | ---- | A=(HL); HL=HL-1
             0x3A => load_u8_impl!(LoadU8Cmd::LDD, LDDInputU8::AHL),
-
-
 /* END || 8-bit Load Commands || END */
 
 /* START || 16-bit Load Commands || START */
-            // todo!()
+            // LD rr,nn | x1 nn nn | 12 | ---- | rr=nn
+            0x01 => load_u16_impl!(LoadU16Cmd::LD, LDInputU16::RRNN(BC)),
+            0x11 => load_u16_impl!(LoadU16Cmd::LD, LDInputU16::RRNN(DE)),
+            0x21 => load_u16_impl!(LoadU16Cmd::LD, LDInputU16::RRNN(HL)),
+            0x31 => load_u16_impl!(LoadU16Cmd::LD, LDInputU16::RRNN(SP)),
+            // LD SP,HL | F9 | 8 | ---- | SP=HL
+            0xF9 => load_u16_impl!(LoadU16Cmd::LD, LDInputU16::SPHL),
+
+            // PUSH rr | x5 | 16 | ---- | SP=SP-2; (SP)=rr
+            0xF5 => load_u16_impl!(LoadU16Cmd::PUSH, InputU16(AF)),
+            0xC5 => load_u16_impl!(LoadU16Cmd::PUSH, InputU16(BC)),
+            0xD5 => load_u16_impl!(LoadU16Cmd::PUSH, InputU16(DE)),
+            0xE5 => load_u16_impl!(LoadU16Cmd::PUSH, InputU16(HL)),
+
+        // todo!("wtv does (AF) even mean?")
+            // POP rr | x1 | 12 | (AF) | rr=(SP); SP=SP+2
+            0xF1 => load_u16_impl!(LoadU16Cmd::POP, InputU16(AF)),
+            0xC1 => load_u16_impl!(LoadU16Cmd::POP, InputU16(BC)),
+            0xD1 => load_u16_impl!(LoadU16Cmd::POP, InputU16(DE)),
+            0xE1 => load_u16_impl!(LoadU16Cmd::POP, InputU16(HL)),
 /* END || 16-bit Load Commands || END */
 
 /* START || 8bit-Arithmetic/logical Commands || START */

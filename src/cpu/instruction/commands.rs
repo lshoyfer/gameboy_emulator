@@ -3,16 +3,16 @@ use super::input::*;
 
 /// Load U8 command set
 pub enum LoadU8Cmd {
-    LD(LDInputU8), // todo!("Implement io-port loads")
-    LDI(LDIInputU8), // todo!("Implement & also figure out input structure")
-    LDD(LDDInputU8), // todo!("Implement & also figure out input structure")
+    LD(LDInputU8),
+    LDI(LDIInputU8),
+    LDD(LDDInputU8),
 }
 
 /// Load U16 command set
 pub enum LoadU16Cmd {
-    LD, // todo!()
-    PUSH, // todo!()
-    POP, // todo!()
+    LD(LDInputU16),
+    PUSH(InputU16),
+    POP(InputU16),
 }
 
 /// Arithmetical/Logical U8 command set

@@ -59,3 +59,4 @@ make_macro_with_no_input!(arithmetic_u8_impl, Instruction::ArithmeticLogical8Bit
 make_macro!(arithmetic_u16_impl, Instruction::ArithmeticLogical16Bit);
 make_macro!(jump_impl, Instruction::Jump);
 make_macro!(load_u8_impl, Instruction::Load8Bit);
+make_macro!(load_u16_impl, Instruction::Load16Bit);

@@ -57,7 +57,6 @@ impl Registers {
         self.h = ((value & 0xFF00) >> 8) as u8;
         self.l = (value & 0xFF) as u8;
     }
-
 }
 
 
@@ -99,11 +98,13 @@ impl From<u8> for FlagRegister {
         - the enum variants either be listed in the order A,B,C,D,E,H,L or their numerical values be explicitly defined to be 
             0,1,2,3,4,5,6 respectively in order for use in casts and ptr arithmetic
 */
+
+/// Consists of the major seven 8-bit registers (F is notably excluded which is what it is but it is never going to be matched in a match arm so...)
 pub enum RegisterU8 {
     A, B, C, D, E, H, L,
 }
 
+/// Consists of the major 5 compound/16-bit registers including the stack pointer
 pub enum RegisterU16 {
-    BC, DE, HL,
-    SP // TODO (stack pointer)
+    BC, DE, HL, SP, AF
 }
