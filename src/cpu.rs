@@ -133,7 +133,30 @@ impl CPU {
                                 self.pc.wrapping_add(3)
                             }
                             // todo!("io-ports aren't yet implemented/designed/considered")
-                            LDInputU8::ReadIoN() | LDInputU8::WriteIoN() | LDInputU8::ReadIoC() | LDInputU8::WriteIoC() => unimplemented!("io-ports")
+                            LDInputU8::ReadIoN => {
+                                self.registers.a = self.bus.read_byte(
+                                    0xFF00 + (self.read_immediate_u8() as u16)
+                                );
+                                self.pc.wrapping_add(2)
+                            },
+                            LDInputU8::WriteIoN => {
+                                *self.bus.borrow_byte_mut(
+                                    0xFF00 + (self.read_immediate_u8() as u16)
+                                ) = self.registers.a;
+                                self.pc.wrapping_add(2)
+                            }
+                            LDInputU8::ReadIoC => {
+                                self.registers.a = self.bus.read_byte(
+                                    0xFF00 + (self.registers.c as u16)
+                                );
+                                self.pc.wrapping_add(1)
+                            }
+                            LDInputU8::WriteIoC => {
+                                *self.bus.borrow_byte_mut(
+                                    0xFF00 + (self.registers.c as u16)
+                                ) = self.registers.a;
+                                self.pc.wrapping_add(1)
+                            }
                         }
                     }
                     LoadU8Cmd::LDI(input) => {

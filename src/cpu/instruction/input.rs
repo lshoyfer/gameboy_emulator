@@ -121,14 +121,14 @@ pub enum LDInputU8 {
 // todo!("io-ports aren't yet implemented/designed/considered")
 // START IO-ports
     /// Load into register (A) from (IO-port N) (0xFFF0+n)
-    ReadIoN(),
+    ReadIoN,
     /// Load into (IO-port N) (0xFFF0+n) from register (A)
-    WriteIoN(),
+    WriteIoN,
 
     /// Load into register (A) from (IO-port C) (0xFFF0+C)
-    ReadIoC(),
+    ReadIoC,
     /// Load into (IO-port C) (0xFFF0+C) from register (A)
-    WriteIoC()
+    WriteIoC
 // END IO-ports
 }
 

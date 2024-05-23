@@ -77,8 +77,9 @@ impl Instruction {
             not quite an "input" in the traditional sense), where possible inputs are
                 r := a register
                 rr := 16 bit compound register (BC, DE, HL, SP (Stack Pointer))
-                n/nn := immediate value
-                (HL) := the value at the address in compound 16bit register HL (deref of HL -- *HL)
+                n := immediate value (for the INS _,_ syntax); read it as a byte. n means a 1 byte, nn (no spaces) means 2 bytes/a word
+                nn := immediate value (for the addr syntax); read it hexadecimally so nn means 8 bits/1 byte, nn nn (with a space) means 16 bits/2 bytes/a word
+                (rr) := the value at the address in a compound 16bit register or 16bit immediate value (nn); example: (HL) means a deref of HL -- *HL
                 dd := signed 8-bit number
             addr := address encoding in hexadecimal (sometimes generic, i.e. having a variable to encode multiple possible inputs)
             C := # clock cycles
@@ -170,15 +171,23 @@ impl Instruction {
             0x0A => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::ABC),
             // LD A,(DE) | 1A | 8 | ---- | A=(DE)
             0x1A => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::ADE),
-            // LD A,(nn) | 1A | 16 | ---- | A=(nn)
+            // LD A,(nn) | FA nn nn | 16 | ---- | A=(nn)
             0xFA => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::AII),
             // LD (BC),A | 02 | 8 | ---- | (BC)=A
             0x02 => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::BCA),
             // LD (DE),A | 12 | 8 | ---- | (DE)=A
             0x12 => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::DEA),
-            // LD (nn),A | EA | 16 | ---- | (nn)=A
+            // LD (nn),A | EA nn nn | 16 | ---- | (nn)=A
             0xEA => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::IIA),
-        // todo!("IO-Port Loads")
+        // todo!("io-ports aren't yet implemented/designed/considered")
+            // LD A,(0xFF00+n) | F0 nn | 12 | ---- | A=(0xFF00+n); (i.e. read from io-port n)
+            0xF0 => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::ReadIoN),
+            // LD (0xFF00+n),A | E0 nn | 12 | ---- | (0xFF00+n)=A; (i.e. write to io-port n)
+            0xE0 => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::WriteIoN),
+            // LD A,(0xFF00+C) | F2 | 8 | ---- | A=(0xFF00+C); (i.e. read from io-port C)
+            0xF2 => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::ReadIoC),
+            // LD (0xFF00+C),A | E2 | 8 | ---- | (0xFF00+C)=A; (i.e. write to io-port C)
+            0xE2 => load_u8_impl!(LoadU8Cmd::LD, LDInputU8::WriteIoC),
 
             // LDI (HL),A | 22 | 8 | ---- | (HL)=A; HL=HL+1
             0x22 => load_u8_impl!(LoadU8Cmd::LDI, LDIInputU8::HLA),
