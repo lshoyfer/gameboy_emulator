@@ -91,7 +91,7 @@ impl Instruction {
                 cy := carry bit
         */
         match byte {
-/* TODO STATUS: 16-bit Loads, DAA, Most 16-bit Arithmetic, Rotates & Shifts, Bit Ops, CPU Control, Jumpcommands */
+/* TODO STATUS: DAA, Most 16-bit Arithmetic, Rotates & Shifts, Bit Ops, CPU Control, Jumpcommands */
 /* START || 8-bit Load Commands || START */
             // LD r,r | xx | 4 | ---- | r=r
                 /* A,r | 7x */
@@ -217,7 +217,7 @@ impl Instruction {
             0xD5 => load_u16_impl!(LoadU16Cmd::PUSH, InputU16(DE)),
             0xE5 => load_u16_impl!(LoadU16Cmd::PUSH, InputU16(HL)),
 
-        // todo!("wtv does (AF) even mean?")
+            /* (AF) here is well... if we set AF via POP then F will be whatever POP returned -- so actually pretty self-implied */
             // POP rr | x1 | 12 | (AF) | rr=(SP); SP=SP+2
             0xF1 => load_u16_impl!(LoadU16Cmd::POP, InputU16(AF)),
             0xC1 => load_u16_impl!(LoadU16Cmd::POP, InputU16(BC)),

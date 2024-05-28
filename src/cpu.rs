@@ -226,7 +226,6 @@ impl CPU {
                         self.pc.wrapping_add(1)
                     }
                     LoadU16Cmd::POP(InputU16(rr)) => {
-                        // todo!("Does POP mess with the flags? What does (AF) mean in the spec?")
                         let result = self.pop();
                         match rr {
                             RegisterU16::AF => self.registers.set_af(result),
@@ -464,7 +463,37 @@ impl CPU {
                             CompoundInputU8::Address => todo!("addressing HL")
                         }
                     }
-                    AritLogiU8Cmd::DAA => todo!("Implement"),
+                    AritLogiU8Cmd::DAA => {
+                        // taken from https://ehaskins.com/2018-01-30%20Z80%20DAA/ + checked with other Z80 documentation attempts on DAA
+                        let mut adjustment = 0x00;
+
+                        // lower 4 bits
+                        if self.registers.f.half_carry || (self.registers.a > 0x09) {
+                            adjustment |= 0x06;
+                        }
+
+                        // upper 4 bits (handles setting of carry flag as well)
+                        if self.registers.f.carry || self.registers.a > 0x90 {
+                            adjustment |= 0x60;
+                            self.registers.f.carry = true;
+                        } else {
+                            self.registers.f.carry = false
+                        }
+
+                        // actual register A accumulator adjustment
+                        self.registers.a = if self.registers.f.subtract {
+                            self.registers.a.wrapping_sub(adjustment)
+                        } else {
+                            self.registers.a.wrapping_add(adjustment)
+                        };
+
+                        /* handling the rest of the flags */
+                        self.registers.f.half_carry = false; // half-carry flag is reset always 
+                        // N/negative flag is not affected
+                        self.registers.f.zero = self.registers.a == 0; // zero is set as defined
+
+                        self.pc.wrapping_add(1)
+                    }
                     AritLogiU8Cmd::CPL => {
                         self.registers.a = !self.registers.a;
                         // zero flag is not affected
@@ -852,6 +881,7 @@ impl CPU {
         self.registers.f.subtract = false;
         self.registers.f.half_carry = (value & 0xF) == 0; 
         // carry flag is """not affected""" apparently ¯\_(ツ)_/¯ 
+        // this means DAA cannot be used for inc/dec operations
     }
 
     // sets the proper flags after a dec operation
