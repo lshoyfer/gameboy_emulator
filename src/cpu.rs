@@ -520,17 +520,94 @@ impl CPU {
                                 let sum = self.addhl(self.registers.get_hl());
                                 self.registers.set_hl(sum);
                             }
-                            RegisterU16::SP => todo!("Stack Pointer Implementation"),
+                            RegisterU16::SP => {
+                                let sum = self.addhl(self.sp);
+                                self.registers.set_hl(sum);
+                            }
                             RegisterU16::AF => unreachable!("ADDHL doesn't operate on the AF register -- it is not a valid input"),
                         }
+                        self.pc.wrapping_add(1) 
                     }
-                    AritLogiU16Cmd::INC(InputU16(target)) => todo!("Implement"),
-                    AritLogiU16Cmd::DEC(InputU16(target)) => todo!("Implement"),
-                    AritLogiU16Cmd::ADDSP(InputI8(number)) => todo!("Stack Pointer Implementation"),
-                    AritLogiU16Cmd::LD(InputI8(number)) => todo!("Implement"),
+                    AritLogiU16Cmd::INC(InputU16(target)) => {
+                        match target {
+                            RegisterU16::BC => self.registers.set_bc(self.registers.get_bc().wrapping_add(1)),
+                            RegisterU16::DE => self.registers.set_de(self.registers.get_de().wrapping_add(1)),
+                            RegisterU16::HL => self.registers.set_hl(self.registers.get_hl().wrapping_add(1)),
+                            RegisterU16::SP => self.sp = self.sp.wrapping_add(1),
+                            RegisterU16::AF => unreachable!("INC rr (16-bit) doesn't operate on the AF register -- it is not a valid input"),
+                        }
+                        self.pc.wrapping_add(1) 
+                    }
+                    AritLogiU16Cmd::DEC(InputU16(target)) => {
+                        match target {
+                            RegisterU16::BC => self.registers.set_bc(self.registers.get_bc().wrapping_sub(1)),
+                            RegisterU16::DE => self.registers.set_de(self.registers.get_de().wrapping_sub(1)),
+                            RegisterU16::HL => self.registers.set_hl(self.registers.get_hl().wrapping_sub(1)),
+                            RegisterU16::SP => self.sp = self.sp.wrapping_sub(1),
+                            RegisterU16::AF => unreachable!("DEC rr (16-bit) doesn't operate on the AF register -- it is not a valid input"),
+                        }
+                        self.pc.wrapping_add(1) 
+                    }
+                    AritLogiU16Cmd::ADDSP => {
+                        // NOTE: this comes in as a u8 so i wont have to bit mask it later since it is already in the range i want (bottom 12 bits) for the following operations
+                        let signed_immediate = self.read_immediate_u8() as i16;
+                        let did_overflow;
+
+                        if signed_immediate.is_negative() {
+                            // NOTE: promoting to i32 because SP starts out as u16 and may not fit inside an i16 as expected (i.e. it may be a different negative number)
+                            // ALSO: This may not even be documented as a required edge case, and also this might be a dumb way of doing it anyways! todo!("CHECK THIS")
+                            self.registers.f.half_carry = ((self.sp as i32 & 0x0FFF) + (signed_immediate as i32)).is_negative();
+
+                            // SAFETY: signed_immediate is read initially as a u8 so the abs() will always fit in an i16 (and u16)
+                            (self.sp, did_overflow) = self.sp.overflowing_sub(signed_immediate.abs() as u16)
+                        } else {
+                            self.registers.f.half_carry = ((self.sp & 0x0FFF) + (signed_immediate as u16)) & 0x1000 == 0x1000;
+                            (self.sp, did_overflow) = self.sp.overflowing_add(signed_immediate as u16)
+                        }
+
+                        // zero flag is reset
+                        self.registers.f.zero = false;
+                        // N/subtract flag is reset
+                        self.registers.f.subtract = false;
+                        // carry flag set/reset as defined
+                        self.registers.f.carry = did_overflow;
+                        // half-carry is set in the above if/else
+
+
+                        self.pc.wrapping_add(2)
+                    }
+                    AritLogiU16Cmd::LDHLSP => {
+                        // todo!("check if carry & half-carry flags follow the same procedure as ADDSP -- im pretty sure they do")
+                        // NOTE: this comes in as a u8 so i wont have to bit mask it later since it is already in the range i want (bottom 12 bits) for the following operations
+                        let signed_immediate = self.read_immediate_u8() as i16;
+                        let (new_hl, did_overflow);
+
+                        if signed_immediate.is_negative() {
+                            // NOTE: promoting to i32 because SP starts out as u16 and may not fit inside an i16 as expected (i.e. it may be a different negative number)
+                            // ALSO: This may not even be documented as a required edge case, and also this might be a dumb way of doing it anyways! todo!("CHECK THIS")
+                            self.registers.f.half_carry = ((self.sp as i32 & 0x0FFF) + (signed_immediate as i32)).is_negative();
+
+                            // SAFETY: signed_immediate is read initially as a u8 so the abs() will always fit in an i16 (and u16)
+                            (new_hl, did_overflow) = self.sp.overflowing_sub(signed_immediate.abs() as u16)
+                        } else {
+                            self.registers.f.half_carry = ((self.sp & 0x0FFF) + (signed_immediate as u16)) & 0x1000 == 0x1000;
+                            (new_hl, did_overflow) = self.sp.overflowing_add(signed_immediate as u16)
+                        }
+
+                        self.registers.set_hl(new_hl);
+
+                        // zero flag is reset
+                        self.registers.f.zero = false;
+                        // N/subtract flag is reset
+                        self.registers.f.subtract = false;
+                        // carry flag set/reset as defined
+                        self.registers.f.carry = did_overflow;
+                        // half-carry is set in the above if/else
+
+
+                        self.pc.wrapping_add(2)
+                    }
                 }
-                // all AritLogiU16Cmd variants are 1-byte wide commands so the PC-increment can go here as an umbrella/dedupe
-                self.pc.wrapping_add(1) 
             }
 
             Instruction::RotateShift(command) => {
@@ -895,7 +972,7 @@ impl CPU {
 /* ArithmeticLogical16Bit Utils */
     fn addhl(&mut self, value: u16) -> u16 {
         let (sum, did_overflow) = self.registers.get_hl().overflowing_add(value);
-        self.registers.f.zero = sum == 0;
+        // zero-flag is not affected
         self.registers.f.subtract = false;
         /* the LR-CPU has a 4bit ALU, so I believe adding from least to most significant would
            mean the half_carry reflects the upper byte, checking @ bit 11 & 12. */

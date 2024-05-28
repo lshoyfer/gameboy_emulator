@@ -80,7 +80,7 @@ impl Instruction {
                 r := a register
                 rr := 16 bit compound register (BC, DE, HL, SP (Stack Pointer))
                 n := immediate value (for the INS _,_ syntax); read it as a byte. n means a 1 byte, nn (no spaces) means 2 bytes/a word
-                nn := immediate value (for the addr syntax); read it hexadecimally so nn means 8 bits/1 byte, nn nn (with a space) means 16 bits/2 bytes/a word
+                nn or ss := immediate value (for the addr syntax); read it hexadecimally so nn means 8 bits/1 byte, nn nn (with a space) means 16 bits/2 bytes/a word; ss means it is signed, nn unsigned
                 (rr) := the value at the address in a compound 16bit register or 16bit immediate value (nn); example: (HL) means a deref of HL -- *HL
                 dd := signed 8-bit number
             addr := address encoding in hexadecimal (sometimes generic, i.e. having a variable to encode multiple possible inputs)
@@ -91,7 +91,7 @@ impl Instruction {
                 cy := carry bit
         */
         match byte {
-/* TODO STATUS: DAA, Most 16-bit Arithmetic, Rotates & Shifts, Bit Ops, CPU Control, Jumpcommands */
+/* TODO STATUS: Rotates & Shifts, Bit Ops, CPU Control, Jumpcommands */
 /* START || 8-bit Load Commands || START */
             // LD r,r | xx | 4 | ---- | r=r
                 /* A,r | 7x */
@@ -226,7 +226,6 @@ impl Instruction {
 /* END || 16-bit Load Commands || END */
 
 /* START || 8bit-Arithmetic/logical Commands || START */
-            /* STATUS: All enumerated. All done except for DAA. */
             // ADD A,r | 8x | 4 | z0hc | A=A+r
             0x87 => arithmetic_u8_impl!(AritLogiU8Cmd::ADD, CompoundInputU8::Register(A)),
             0x80 => arithmetic_u8_impl!(AritLogiU8Cmd::ADD, CompoundInputU8::Register(B)),
@@ -354,14 +353,13 @@ impl Instruction {
             0x35 => arithmetic_u8_impl!(AritLogiU8Cmd::DEC, CompoundInputU8::Address),
             
             // DAA | 27 | 4 | z-0x | decimal adjust accumulator (A)
-            0x27 => todo!("implement DAA on CPU"),
+            0x27 => arithmetic_u8_impl!(AritLogiU8Cmd::DAA),
             
             // CPL | 2F | 4 | -11- | A=!A aka A^0xFF
             0x2F => arithmetic_u8_impl!(AritLogiU8Cmd::CPL),
 /* END || 8bit-Arithmetic/logical Commands || END */
 
 /* START || 16bit-Arithmetic/logical Commands || START */
-            /* STATUS: All enumerated. Most unimplemented. */
             // ADD HL,rr | x9 | 8 | -0hc | HL=HL+rr
             0x09 => arithmetic_u16_impl!(AritLogiU16Cmd::ADDHL, InputU16(BC)),
             0x19 => arithmetic_u16_impl!(AritLogiU16Cmd::ADDHL, InputU16(DE)),
@@ -369,22 +367,22 @@ impl Instruction {
             0x39 => arithmetic_u16_impl!(AritLogiU16Cmd::ADDHL, InputU16(SP)),
 
             // INC rr | x3 | 8 | ---- | rr=rr+1
-            0x03 => todo!("Implement 16-bit BC-register increment instruction on CPU"),
-            0x13 => todo!("Implement 16-bit DE-register increment instruction on CPU"),
-            0x23 => todo!("Implement 16-bit HL-register increment instruction on CPU"),
-            0x33 => todo!("Implement 16-bit SP-register increment instruction on CPU"),
+            0x03 => arithmetic_u16_impl!(AritLogiU16Cmd::INC, InputU16(BC)),
+            0x13 => arithmetic_u16_impl!(AritLogiU16Cmd::INC, InputU16(DE)),
+            0x23 => arithmetic_u16_impl!(AritLogiU16Cmd::INC, InputU16(HL)),
+            0x33 => arithmetic_u16_impl!(AritLogiU16Cmd::INC, InputU16(SP)),
             
             // DEC rr | xB | 8 | ---- | rr=rr-1
-            0x0B => todo!("Implement 16-bit BC-register decrement instruction on CPU"),
-            0x1B => todo!("Implement 16-bit DE-register decrement instruction on CPU"),
-            0x2B => todo!("Implement 16-bit HL-register decrement instruction on CPU"),
-            0x3B => todo!("Implement 16-bit SP-register decrement instruction on CPU"),
+            0x0B => arithmetic_u16_impl!(AritLogiU16Cmd::DEC, InputU16(BC)),
+            0x1B => arithmetic_u16_impl!(AritLogiU16Cmd::DEC, InputU16(DE)), 
+            0x2B => arithmetic_u16_impl!(AritLogiU16Cmd::DEC, InputU16(HL)),
+            0x3B => arithmetic_u16_impl!(AritLogiU16Cmd::DEC, InputU16(SP)),
 
-            // ADD SP,dd | E8 | 16 | 00hc | SP=SP +/- dd
-            0xE8 => todo!("Implement ADDSP"),
+            // ADD SP,dd | E8 ss | 16 | 00hc | SP=SP +/- dd
+            0xE8 => arithmetic_u16_impl!(AritLogiU16Cmd::ADDSP),
 
-            // LD HL,SP+dd | F8 | 12 | 00hc | HL = SP +/- dd
-            0xF8 => todo!("Implement LDHL"),
+            // LD HL,SP+dd | F8 ss | 12 | 00hc | HL = SP +/- dd
+            0xF8 => arithmetic_u16_impl!(AritLogiU16Cmd::LDHLSP),
 /* END || 16bit-Arithmetic/logical Commands || END */
 
 /* START || Rotate & Shift Commands || START */

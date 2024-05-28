@@ -27,9 +27,6 @@ pub struct InputU8(pub RegisterU8);
 /// NOTE: 16-bit Ops only take register inputs (if they do take any special inputs at all, that is)
 pub struct InputU16(pub RegisterU16);
 
-/// 8-bit Signed Number Input tho tbh idk where it comes from so this may be removed, I gotta figure it out
-pub struct InputI8(pub i8);
-
 /// For [`JmpCmd::JP`] which has an input with 3 possible variations
 /// 
 /// [`JmpCmd::JP`]: super::JmpCmd::JP

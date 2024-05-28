@@ -34,10 +34,10 @@ pub enum AritLogiU8Cmd {
 /// Arithmetical/Logical U16 command set
 pub enum AritLogiU16Cmd {
     ADDHL(InputU16),
-    INC(InputU16), // todo!()
-    DEC(InputU16), // todo!()
-    ADDSP(InputI8), // todo!()
-    LD(InputI8), // todo!()
+    INC(InputU16),
+    DEC(InputU16),
+    ADDSP,
+    LDHLSP
 }
 
 /// Rotate & Shift command set
