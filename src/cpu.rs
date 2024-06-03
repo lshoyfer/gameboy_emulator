@@ -68,7 +68,7 @@ impl CPU {
                     as seen in the ptr.add(r/r1/r2 as usize) type operations.
 
                     For the 16-bit load, I used a match statement because there are only
-                    3 commands that matchh all registers and there are only 4 registers there, as
+                    3 commands that match all registers and there are only 4 registers there, as
                     opposed to here where there are 4 variations of the LD that work on 7 registers and
                     LDInputU8::RR is especially egregious as it enumerates the set { (r1, r2) | r1, r2 ∈ r and r1 <= r2 }
                     which has a length of 28 ((7*(7+1))/2)
@@ -386,8 +386,9 @@ impl CPU {
                         }
                     }
                     AritLogiU8Cmd::INC(input) => {
+                        // todo!("Check if order will actually matter in INC/DEC and other operations in practice (i.e. whether we update the register or the flags first)")
                         match input {
-                            CompoundInputU8::Register(target) => {
+                            DoubleInputU8::Register(target) => {
                                 match target {
                                     RegisterU8::A => { 
                                         self.registers.a = self.registers.a.wrapping_add(1);
@@ -418,15 +419,19 @@ impl CPU {
                                         self.inc_flags(self.registers.l);
                                     }
                                 }
-                                self.pc.wrapping_add(1)
                             }
-                            CompoundInputU8::Immediate => unreachable!("Immediate (n) variant for INC instruction does not exist in the CPU spec."),
-                            CompoundInputU8::Address => todo!("addressing HL")
+                            DoubleInputU8::Address => {
+                                let address = self.registers.get_hl();
+                                let result = self.bus.read_byte(address).wrapping_add(1);
+                                self.inc_flags(result);
+                                self.bus.write_byte(address, result);
+                            }
                         }
+                        self.pc.wrapping_add(1)
                     }
                     AritLogiU8Cmd::DEC(input) => {
                         match input {
-                            CompoundInputU8::Register(target) => {
+                            DoubleInputU8::Register(target) => {
                                 match target {
                                     RegisterU8::A => { 
                                         self.registers.a = self.registers.a.wrapping_sub(1);
@@ -457,11 +462,15 @@ impl CPU {
                                         self.dec_flags(self.registers.l);
                                     }
                                 }
-                                self.pc.wrapping_add(1)
                             }
-                            CompoundInputU8::Immediate => unreachable!("Immediate (n) variant for DEC instruction does not exist in the CPU spec."),
-                            CompoundInputU8::Address => todo!("addressing HL")
+                            DoubleInputU8::Address => {
+                                let address = self.registers.get_hl();
+                                let result = self.bus.read_byte(address).wrapping_sub(1);
+                                self.dec_flags(result);
+                                self.bus.write_byte(address, result);
+                            }
                         }
+                        self.pc.wrapping_add(1)
                     }
                     AritLogiU8Cmd::DAA => {
                         // taken from https://ehaskins.com/2018-01-30%20Z80%20DAA/ + checked with other Z80 documentation attempts on DAA
@@ -641,7 +650,11 @@ impl CPU {
                                     RegisterU8::L => self.registers.l = self.rlc(self.registers.l),
                                 }
                             }
-                            DoubleInputU8::Address => todo!("addressing HL")
+                            DoubleInputU8::Address => {
+                                let address = self.registers.get_hl();
+                                let result = self.rlc(self.bus.read_byte(address));
+                                self.bus.write_byte(address, result);
+                            }
                         }
                         self.pc.wrapping_add(2) // all variants of DoubleInputU8 for RSCmds are prefixed
                     }
@@ -658,7 +671,11 @@ impl CPU {
                                     RegisterU8::L => self.registers.l = self.rl(self.registers.l),
                                 }
                             }
-                            DoubleInputU8::Address => todo!("addressing HL")
+                            DoubleInputU8::Address => {
+                                let address = self.registers.get_hl();
+                                let result = self.rl(self.bus.read_byte(address));
+                                self.bus.write_byte(address, result);
+                            }
                         }
                         self.pc.wrapping_add(2) // all variants of DoubleInputU8 for RSCmds are prefixed
                     }
@@ -675,7 +692,11 @@ impl CPU {
                                     RegisterU8::L => self.registers.l = self.rrc(self.registers.l),
                                 }
                             }
-                            DoubleInputU8::Address => todo!("addressing HL")
+                            DoubleInputU8::Address => {
+                                let address = self.registers.get_hl();
+                                let result = self.rrc(self.bus.read_byte(address));
+                                self.bus.write_byte(address, result);
+                            }
                         }
                         self.pc.wrapping_add(2) // all variants of DoubleInputU8 for RSCmds are prefixed
                     }
@@ -692,7 +713,11 @@ impl CPU {
                                     RegisterU8::L => self.registers.l = self.rr(self.registers.l),
                                 }
                             }
-                            DoubleInputU8::Address => todo!("addressing HL")
+                            DoubleInputU8::Address => {
+                                let address = self.registers.get_hl();
+                                let result = self.rr(self.bus.read_byte(address));
+                                self.bus.write_byte(address, result);
+                            }
                         }
                         self.pc.wrapping_add(2) // all variants of DoubleInputU8 for RSCmds are prefixed
                     }
@@ -709,7 +734,11 @@ impl CPU {
                                     RegisterU8::L => self.registers.l = self.sla(self.registers.l),
                                 }
                             }
-                            DoubleInputU8::Address => todo!("addressing HL")
+                            DoubleInputU8::Address => {
+                                let address = self.registers.get_hl();
+                                let result = self.sla(self.bus.read_byte(address));
+                                self.bus.write_byte(address, result);
+                            }
                         }
                         self.pc.wrapping_add(2) // all variants of DoubleInputU8 for RSCmds are prefixed
                     }
@@ -726,7 +755,11 @@ impl CPU {
                                     RegisterU8::L => self.registers.l = self.swap(self.registers.l),
                                 }
                             }
-                            DoubleInputU8::Address => todo!("addressing HL")
+                            DoubleInputU8::Address => {
+                                let address = self.registers.get_hl();
+                                let result = self.swap(self.bus.read_byte(address));
+                                self.bus.write_byte(address, result);
+                            }
                         }
                         self.pc.wrapping_add(2) // all variants of DoubleInputU8 for RSCmds are prefixed
                     }
@@ -743,7 +776,11 @@ impl CPU {
                                     RegisterU8::L => self.registers.l = self.sra(self.registers.l),
                                 }
                             }
-                            DoubleInputU8::Address => todo!("addressing HL")
+                            DoubleInputU8::Address => {
+                                let address = self.registers.get_hl();
+                                let result = self.sra(self.bus.read_byte(address));
+                                self.bus.write_byte(address, result);
+                            }
                         }
                         self.pc.wrapping_add(2) // all variants of DoubleInputU8 for RSCmds are prefixed
                     }
@@ -760,7 +797,11 @@ impl CPU {
                                     RegisterU8::L => self.registers.l = self.srl(self.registers.l),
                                 }
                             }
-                            DoubleInputU8::Address => todo!("addressing HL")
+                            DoubleInputU8::Address => {
+                                let address = self.registers.get_hl();
+                                let result = self.srl(self.bus.read_byte(address));
+                                self.bus.write_byte(address, result);
+                            }
                         }
                         self.pc.wrapping_add(2) // all variants of DoubleInputU8 for RSCmds are prefixed
                     }

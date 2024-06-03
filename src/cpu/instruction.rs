@@ -3,6 +3,8 @@ mod commands;
 mod helper_macros;
 
 use helper_macros::*;
+use crate::cpu::register::RegisterU8::{ A, B, C, D, E, H, L };
+use crate::cpu::register::RegisterU16::{ BC, DE, HL, SP, AF };
 
 // ---- RE-EXPORTS:
 // The intention is to glob import everything from this subtree 
@@ -15,11 +17,6 @@ use helper_macros::*;
 // and implementing instructions, which will involve commands and inputs, etc...
 pub use input::*;
 pub use commands::*;
-
-use crate::cpu::RegisterU16;
-
-
-
 
 /// Enumeration of all CPU Instructions that categorizes all instructions into groups/types
 /// 
@@ -51,23 +48,7 @@ impl Instruction {
         }
     }
 
-    /// NOTE, only RotateShift & SingleBit contain prefixed commands
-    pub fn from_byte_prefixed(byte: u8) -> Option<Self> {
-        match byte {
-/* START || Rotate & Shift Commands || START */
-            // todo!()
-/* END || Rotate & Shift Commands || END */
-
-/* START || Single Bit Operation Commands || START */
-            // todo!()
-/* END || Single Bit Operation Commands || END */
-            _ => None // either unimplemented or unrecognized
-        }
-    }
-
     pub fn from_byte_not_prefixed(byte: u8) -> Option<Self> {
-        use crate::cpu::register::RegisterU8::{ A, B, C, D, E, H, L };
-        use crate::cpu::register::RegisterU16::{ BC, DE, HL, SP, AF };
 
         /* Comment Guide (note it's not an exhaustive/perfectly enunciated syntax--
             --i.e. use some intuition/critical thinking on some outside the exact format :P) */
@@ -91,7 +72,7 @@ impl Instruction {
                 cy := carry bit
         */
         match byte {
-/* TODO STATUS: Rotates & Shifts, Bit Ops, CPU Control, Jumpcommands */
+/* TODO STATUS: Bit Ops, CPU Control, Jumpcommands, some Addressing inputs */
 /* START || 8-bit Load Commands || START */
             // LD r,r | xx | 4 | ---- | r=r
                 /* A,r | 7x */
@@ -331,26 +312,26 @@ impl Instruction {
             0xBE => arithmetic_u8_impl!(AritLogiU8Cmd::CP, CompoundInputU8::Address),
 
             // INC r | xx | 4 | z0h- | r=r+1
-            0x3C => arithmetic_u8_impl!(AritLogiU8Cmd::INC, CompoundInputU8::Register(A)),
-            0x04 => arithmetic_u8_impl!(AritLogiU8Cmd::INC, CompoundInputU8::Register(B)),
-            0x0C => arithmetic_u8_impl!(AritLogiU8Cmd::INC, CompoundInputU8::Register(C)),
-            0x14 => arithmetic_u8_impl!(AritLogiU8Cmd::INC, CompoundInputU8::Register(D)),
-            0x1C => arithmetic_u8_impl!(AritLogiU8Cmd::INC, CompoundInputU8::Register(E)),
-            0x24 => arithmetic_u8_impl!(AritLogiU8Cmd::INC, CompoundInputU8::Register(H)),
-            0x2C => arithmetic_u8_impl!(AritLogiU8Cmd::INC, CompoundInputU8::Register(L)),
+            0x3C => arithmetic_u8_impl!(AritLogiU8Cmd::INC, DoubleInputU8::Register(A)),
+            0x04 => arithmetic_u8_impl!(AritLogiU8Cmd::INC, DoubleInputU8::Register(B)),
+            0x0C => arithmetic_u8_impl!(AritLogiU8Cmd::INC, DoubleInputU8::Register(C)),
+            0x14 => arithmetic_u8_impl!(AritLogiU8Cmd::INC, DoubleInputU8::Register(D)),
+            0x1C => arithmetic_u8_impl!(AritLogiU8Cmd::INC, DoubleInputU8::Register(E)),
+            0x24 => arithmetic_u8_impl!(AritLogiU8Cmd::INC, DoubleInputU8::Register(H)),
+            0x2C => arithmetic_u8_impl!(AritLogiU8Cmd::INC, DoubleInputU8::Register(L)),
             // INC (HL) | 34 | 12 | z0h- | (HL)=(HL)+1
-            0x34 => arithmetic_u8_impl!(AritLogiU8Cmd::INC, CompoundInputU8::Address),
+            0x34 => arithmetic_u8_impl!(AritLogiU8Cmd::INC, DoubleInputU8::Address),
 
             // DEC r | xx | 4 | z1h- | r=r-1
-            0x3D => arithmetic_u8_impl!(AritLogiU8Cmd::DEC, CompoundInputU8::Register(A)),
-            0x05 => arithmetic_u8_impl!(AritLogiU8Cmd::DEC, CompoundInputU8::Register(B)),
-            0x0D => arithmetic_u8_impl!(AritLogiU8Cmd::DEC, CompoundInputU8::Register(C)),
-            0x15 => arithmetic_u8_impl!(AritLogiU8Cmd::DEC, CompoundInputU8::Register(D)),
-            0x1D => arithmetic_u8_impl!(AritLogiU8Cmd::DEC, CompoundInputU8::Register(E)),
-            0x25 => arithmetic_u8_impl!(AritLogiU8Cmd::DEC, CompoundInputU8::Register(H)),
-            0x2D => arithmetic_u8_impl!(AritLogiU8Cmd::DEC, CompoundInputU8::Register(L)),
+            0x3D => arithmetic_u8_impl!(AritLogiU8Cmd::DEC, DoubleInputU8::Register(A)),
+            0x05 => arithmetic_u8_impl!(AritLogiU8Cmd::DEC, DoubleInputU8::Register(B)),
+            0x0D => arithmetic_u8_impl!(AritLogiU8Cmd::DEC, DoubleInputU8::Register(C)),
+            0x15 => arithmetic_u8_impl!(AritLogiU8Cmd::DEC, DoubleInputU8::Register(D)),
+            0x1D => arithmetic_u8_impl!(AritLogiU8Cmd::DEC, DoubleInputU8::Register(E)),
+            0x25 => arithmetic_u8_impl!(AritLogiU8Cmd::DEC, DoubleInputU8::Register(H)),
+            0x2D => arithmetic_u8_impl!(AritLogiU8Cmd::DEC, DoubleInputU8::Register(L)),
             // DEC (HL) | 35 | 12 | z1h- | (HL)=(HL)-1
-            0x35 => arithmetic_u8_impl!(AritLogiU8Cmd::DEC, CompoundInputU8::Address),
+            0x35 => arithmetic_u8_impl!(AritLogiU8Cmd::DEC, DoubleInputU8::Address),
             
             // DAA | 27 | 4 | z-0x | decimal adjust accumulator (A)
             0x27 => arithmetic_u8_impl!(AritLogiU8Cmd::DAA),
@@ -386,8 +367,19 @@ impl Instruction {
 /* END || 16bit-Arithmetic/logical Commands || END */
 
 /* START || Rotate & Shift Commands || START */
-            // todo!()
-            // NOTE: MOST of these are prefixed
+    // NOTE: MOST of these are prefixed (so in the [Instruction::from_byte_prefixed] method)
+        // todo!("RLCA, RLA, RRCA, and RRA might be 000c instead of z00c")
+            // RLCA | 07 | 4 | z00c | rotate akku left (circular)
+            0x07 => rotate_shift_impl!(RSCmd::RLCA),
+
+            // RLA | 17 | 4 | z00c | rotate akku left through carry
+            0x17 => rotate_shift_impl!(RSCmd::RLA),
+            
+            // RRCA | 0F | 4 | z00c | rotate akku right (circular)
+            0x0F => rotate_shift_impl!(RSCmd::RRCA),
+
+            // RRCA | 1F | 4 | z00c | rotate akku right through carry
+            0x1F => rotate_shift_impl!(RSCmd::RRA),
 /* END || Rotate & Shift Commands || END */
 
 /* START || Single Bit Operation Commands || START */
@@ -419,4 +411,105 @@ impl Instruction {
         }
     }
 
+    /// NOTE, only RotateShift & SingleBit contain prefixed commands
+    pub fn from_byte_prefixed(byte: u8) -> Option<Self> {
+        match byte {
+/* START || Rotate & Shift Commands || START */
+            // RLC, r | CB 0x | 8 | z00c | rotate left 
+            0x07 => rotate_shift_impl!(RSCmd::RLC, DoubleInputU8::Register(A)),
+            0x00 => rotate_shift_impl!(RSCmd::RLC, DoubleInputU8::Register(B)),
+            0x01 => rotate_shift_impl!(RSCmd::RLC, DoubleInputU8::Register(C)),
+            0x02 => rotate_shift_impl!(RSCmd::RLC, DoubleInputU8::Register(D)),
+            0x03 => rotate_shift_impl!(RSCmd::RLC, DoubleInputU8::Register(E)),
+            0x04 => rotate_shift_impl!(RSCmd::RLC, DoubleInputU8::Register(H)),
+            0x05 => rotate_shift_impl!(RSCmd::RLC, DoubleInputU8::Register(L)),
+            // RLC, (HL) | CB 06 | 16 | z00c | rotate left 
+            0x06 => rotate_shift_impl!(RSCmd::RLC, DoubleInputU8::Address),
+
+            // RL, r | CB 1x | 8 | z00c | rotate left through carry
+            0x17 => rotate_shift_impl!(RSCmd::RL, DoubleInputU8::Register(A)),
+            0x10 => rotate_shift_impl!(RSCmd::RL, DoubleInputU8::Register(B)),
+            0x11 => rotate_shift_impl!(RSCmd::RL, DoubleInputU8::Register(C)),
+            0x12 => rotate_shift_impl!(RSCmd::RL, DoubleInputU8::Register(D)),
+            0x13 => rotate_shift_impl!(RSCmd::RL, DoubleInputU8::Register(E)),
+            0x14 => rotate_shift_impl!(RSCmd::RL, DoubleInputU8::Register(H)),
+            0x15 => rotate_shift_impl!(RSCmd::RL, DoubleInputU8::Register(L)),
+            // RL, (HL) | CB 16 | 16 | z00c | rotate left through carry
+            0x16 => rotate_shift_impl!(RSCmd::RL, DoubleInputU8::Address),
+
+            // RRC, r | CB 0x | 8 | z00c | rotate right
+            0x0F => rotate_shift_impl!(RSCmd::RRC, DoubleInputU8::Register(A)),
+            0x08 => rotate_shift_impl!(RSCmd::RRC, DoubleInputU8::Register(B)),
+            0x09 => rotate_shift_impl!(RSCmd::RRC, DoubleInputU8::Register(C)),
+            0x0A => rotate_shift_impl!(RSCmd::RRC, DoubleInputU8::Register(D)),
+            0x0B => rotate_shift_impl!(RSCmd::RRC, DoubleInputU8::Register(E)),
+            0x0C => rotate_shift_impl!(RSCmd::RRC, DoubleInputU8::Register(H)),
+            0x0D => rotate_shift_impl!(RSCmd::RRC, DoubleInputU8::Register(L)),
+            // RRC, (HL) | CB 0E | 16 | z00c | rotate right
+            0x0E => rotate_shift_impl!(RSCmd::RRC, DoubleInputU8::Address),
+
+            // RR, r | CB 1x | 8 | z00c | rotate right through carry
+            0x1F => rotate_shift_impl!(RSCmd::RR, DoubleInputU8::Register(A)),
+            0x18 => rotate_shift_impl!(RSCmd::RR, DoubleInputU8::Register(B)),
+            0x19 => rotate_shift_impl!(RSCmd::RR, DoubleInputU8::Register(C)),
+            0x1A => rotate_shift_impl!(RSCmd::RR, DoubleInputU8::Register(D)),
+            0x1B => rotate_shift_impl!(RSCmd::RR, DoubleInputU8::Register(E)),
+            0x1C => rotate_shift_impl!(RSCmd::RR, DoubleInputU8::Register(H)),
+            0x1D => rotate_shift_impl!(RSCmd::RR, DoubleInputU8::Register(L)),
+            // RR, (HL) | CB 1E | 16 | z00c | rotate right through carry
+            0x1E => rotate_shift_impl!(RSCmd::RR, DoubleInputU8::Address),
+
+            // SLA, r | CB 2x | 8 | z00c | shift left arithmetic
+            0x27 => rotate_shift_impl!(RSCmd::SLA, DoubleInputU8::Register(A)),
+            0x20 => rotate_shift_impl!(RSCmd::SLA, DoubleInputU8::Register(B)),
+            0x21 => rotate_shift_impl!(RSCmd::SLA, DoubleInputU8::Register(C)),
+            0x22 => rotate_shift_impl!(RSCmd::SLA, DoubleInputU8::Register(D)),
+            0x23 => rotate_shift_impl!(RSCmd::SLA, DoubleInputU8::Register(E)),
+            0x24 => rotate_shift_impl!(RSCmd::SLA, DoubleInputU8::Register(H)),
+            0x25 => rotate_shift_impl!(RSCmd::SLA, DoubleInputU8::Register(L)),
+            // SLA, (HL) | CB 26 | 16 | z00c | shift left arithmetic
+            0x26 => rotate_shift_impl!(RSCmd::SLA, DoubleInputU8::Address),
+
+            // SWAP, r | CB 3x | 8 | z000 | exchange low & high nibbles
+            0x37 => rotate_shift_impl!(RSCmd::SWAP, DoubleInputU8::Register(A)),
+            0x30 => rotate_shift_impl!(RSCmd::SWAP, DoubleInputU8::Register(B)),
+            0x31 => rotate_shift_impl!(RSCmd::SWAP, DoubleInputU8::Register(C)),
+            0x32 => rotate_shift_impl!(RSCmd::SWAP, DoubleInputU8::Register(D)),
+            0x33 => rotate_shift_impl!(RSCmd::SWAP, DoubleInputU8::Register(E)),
+            0x34 => rotate_shift_impl!(RSCmd::SWAP, DoubleInputU8::Register(H)),
+            0x35 => rotate_shift_impl!(RSCmd::SWAP, DoubleInputU8::Register(L)),
+            // SWAP, (HL) | CB 36 | 16 | z000 | exchange low & high nibbles:w
+            0x36 => rotate_shift_impl!(RSCmd::SWAP, DoubleInputU8::Address),
+
+            // SRA, r | CB 2x | 8 | z00c | shift right arithmetic
+            0x2F => rotate_shift_impl!(RSCmd::SRA, DoubleInputU8::Register(A)),
+            0x28 => rotate_shift_impl!(RSCmd::SRA, DoubleInputU8::Register(B)),
+            0x29 => rotate_shift_impl!(RSCmd::SRA, DoubleInputU8::Register(C)),
+            0x2A => rotate_shift_impl!(RSCmd::SRA, DoubleInputU8::Register(D)),
+            0x2B => rotate_shift_impl!(RSCmd::SRA, DoubleInputU8::Register(E)),
+            0x2C => rotate_shift_impl!(RSCmd::SRA, DoubleInputU8::Register(H)),
+            0x2D => rotate_shift_impl!(RSCmd::SRA, DoubleInputU8::Register(L)),
+            // SRA, (HL) | CB 2E | 16 | z00c | shift right arithmetic
+            0x2E => rotate_shift_impl!(RSCmd::SRA, DoubleInputU8::Address),
+
+            // SRL, r | CB 3x | 8 | z00c | shift right logical
+            0x3F => rotate_shift_impl!(RSCmd::SRL, DoubleInputU8::Register(A)),
+            0x38 => rotate_shift_impl!(RSCmd::SRL, DoubleInputU8::Register(B)),
+            0x39 => rotate_shift_impl!(RSCmd::SRL, DoubleInputU8::Register(C)),
+            0x3A => rotate_shift_impl!(RSCmd::SRL, DoubleInputU8::Register(D)),
+            0x3B => rotate_shift_impl!(RSCmd::SRL, DoubleInputU8::Register(E)),
+            0x3C => rotate_shift_impl!(RSCmd::SRL, DoubleInputU8::Register(H)),
+            0x3D => rotate_shift_impl!(RSCmd::SRL, DoubleInputU8::Register(L)),
+            // SRL, (HL) | CB 3E | 16 | z00c | shift right logical
+            0x3E => rotate_shift_impl!(RSCmd::SRL, DoubleInputU8::Address),
+
+
+/* END || Rotate & Shift Commands || END */
+
+/* START || Single Bit Operation Commands || START */
+            // todo!()
+/* END || Single Bit Operation Commands || END */
+            _ => None // either unimplemented or unrecognized
+        }
+    }
 }

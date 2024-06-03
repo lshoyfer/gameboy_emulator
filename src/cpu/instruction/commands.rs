@@ -15,7 +15,7 @@ pub enum LoadU16Cmd {
     POP(InputU16),
 }
 
-/// Arithmetical/Logical U8 command set
+/// Arithmetical/Logical u8 command set
 pub enum AritLogiU8Cmd {
     ADD(CompoundInputU8), 
     ADC(CompoundInputU8), 
@@ -25,9 +25,9 @@ pub enum AritLogiU8Cmd {
     XOR(CompoundInputU8), 
     OR(CompoundInputU8), 
     CP(CompoundInputU8), 
-        INC(CompoundInputU8), // todo!("Immediate variant input is unused, consider changing type/system")
-        DEC(CompoundInputU8), // todo!("Immediate variant input is unused, consider changing type/system")
-        DAA, // todo!("Implement")
+    INC(DoubleInputU8),
+    DEC(DoubleInputU8),
+    DAA,
     CPL,
 }
 
@@ -46,14 +46,14 @@ pub enum RSCmd {
     RLA,
     RRCA,
     RRA,
-    RLC(DoubleInputU8), // todo!("(HL) implementation")
-    RL(DoubleInputU8), // todo!("(HL) implementation")
-    RRC(DoubleInputU8), // todo!("(HL) implementation")
-    RR(DoubleInputU8), // todo!("(HL) implementation")
-    SLA(DoubleInputU8), // todo!("(HL) implementation")
-    SWAP(DoubleInputU8), // todo!("(HL) implementation")
-    SRA(DoubleInputU8), // todo!("(HL) implementation")
-    SRL(DoubleInputU8), // todo!("(HL) implementation")
+    RLC(DoubleInputU8),
+    RL(DoubleInputU8),
+    RRC(DoubleInputU8),
+    RR(DoubleInputU8),
+    SLA(DoubleInputU8),
+    SWAP(DoubleInputU8),
+    SRA(DoubleInputU8),
+    SRL(DoubleInputU8),
 }
 
 /// Single Bit Operation command set
