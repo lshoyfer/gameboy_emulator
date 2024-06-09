@@ -1,0 +1,7 @@
+{
+    // I cannot figure out why rust-analyzer keeps complaining that crate::cpu::instruction::input is unlinked when it is linked,
+    // also, it suggests a nonsense fix that involves writing "mod Input;", with the i capitalized (which does fix it but... yeah)
+    "rust-analyzer.diagnostics.disabled": [
+        "unlinked-file"
+    ]
+}

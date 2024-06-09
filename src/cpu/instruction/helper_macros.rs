@@ -18,7 +18,7 @@ macro_rules! make_macro {
     ($macro_name:ident, $instruction:path) => {
         macro_rules! $macro_name {
             ($cmd:path, $input:expr) => {
-                Some(
+                Ok(
                     $instruction(
                         $cmd($input)
                     )
@@ -35,14 +35,14 @@ macro_rules! make_macro_with_no_input {
     ($macro_name:ident, $instruction:path) => {
         macro_rules! $macro_name {
             ($cmd:path, $input:expr) => {
-                Some(
+                Ok(
                     $instruction(
                         $cmd($input)
                     )
                 )
             };
             ($no_input_cmd:expr) => {
-                Some(
+                Ok(
                     $instruction(
                         $no_input_cmd
                     )
@@ -61,3 +61,14 @@ make_macro!(jump_impl, Instruction::Jump);
 make_macro!(load_u8_impl, Instruction::Load8Bit);
 make_macro!(load_u16_impl, Instruction::Load16Bit);
 make_macro_with_no_input!(rotate_shift_impl, Instruction::RotateShift);
+make_macro!(single_bit_impl, Instruction::SingleBit);
+
+
+macro_rules! build_err {
+    ($opcode:expr) => {
+        Err(InstructionBuildError(
+            format!("Opcode {:#b} is an unrecognized instruction", $opcode)
+        ))
+    };
+}
+pub(super) use build_err;

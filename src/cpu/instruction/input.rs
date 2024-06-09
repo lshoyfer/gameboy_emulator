@@ -1,8 +1,11 @@
 //! Module containing items for CPU command input management of registers
+//! NOTE: It is not entirely perfectly sensical or consistent, as I am messing
+//! with different design types/just want to experiment with Rust typing.
 
 use crate::cpu::register::{ RegisterU8, RegisterU16 };
 
 /// For 8-bit Operations that have 3 possible variations: register manipulation, immediate-in-memory addressing, HL addressing
+#[cfg_attr(test, derive(Debug))]
 pub enum CompoundInputU8 {
     /// Use the given 8-bit register in the operation
     Register(RegisterU8), // x
@@ -13,6 +16,7 @@ pub enum CompoundInputU8 {
 }
 
 /// For 8-bit Operations that have 2 possible variations: register manipulation AND HL addressing -- these DON'T have immediate-in-memory addressing 
+#[cfg_attr(test, derive(Debug))]
 pub enum DoubleInputU8 {
     /// Use the given 8-bit register in the operation
     Register(RegisterU8), // x
@@ -20,16 +24,21 @@ pub enum DoubleInputU8 {
     Address // (HL)
 }
 
-// For 8-bit Operations that only take basic register manipulation inputs
+/// For 8-bit Operations that only take basic register manipulation inputs.
+/// This is only used if there is no nesting of Input types (i.e. [`BitInput`] uses
+/// [`RegisuterU8`] instead of [`InputU8`])
+#[cfg_attr(test, derive(Debug))]
 pub struct InputU8(pub RegisterU8);
 
 /// For 16-bit Operations that only take basic register manipulation inputs 
 /// NOTE: 16-bit Ops only take register inputs (if they do take any special inputs at all, that is)
+#[cfg_attr(test, derive(Debug))]
 pub struct InputU16(pub RegisterU16);
 
 /// For [`JmpCmd::JP`] which has an input with 3 possible variations
 /// 
 /// [`JmpCmd::JP`]: super::JmpCmd::JP
+#[cfg_attr(test, derive(Debug))]
 pub enum JPInput {
     /// Jump to the address immediately given in the next two bytes of memory
     Direct,
@@ -52,6 +61,7 @@ pub enum JPInput {
 /// [`JmpCmd::JP`]: super::JmpCmd::JP
 /// [`JmpCmd::RST`]: super::JmpCmd::RST
 /// [`JmpCmd::RETI`]: super::JmpCmd::RETI
+#[cfg_attr(test, derive(Debug))]
 pub enum JmpCmdInput {
     /// Has multiple meanings depending on the command.
     /// - [`JmpCmd::JR`], jump to PC + the value in the next byte of memory (relative jump)
@@ -69,6 +79,7 @@ pub enum JmpCmdInput {
 }
 
 /// For `Conditional` variants of inputs for Jump commands
+#[cfg_attr(test, derive(Debug))]
 pub enum JmpCmdCondition {
     /// do Direct operation if zero-flag is reset
     NZ,
@@ -91,6 +102,7 @@ pub enum JmpCmdCondition {
 /// the memory bus.
 /// 
 /// [`LoadU8Cmd::LD`]: super::LoadU8Cmd::LD
+#[cfg_attr(test, derive(Debug))]
 pub enum LDInputU8 {
     /// Load into a (Register) from a (Register)
     RR(RegisterU8, RegisterU8),
@@ -133,6 +145,7 @@ pub enum LDInputU8 {
 /// 
 /// [`LoadU8Cmd::LDI`]: super::LoadU8Cmd::LDI
 /// [`LoadU8Cmd::LDD`]: super::LoadU8Cmd::LDD
+#[cfg_attr(test, derive(Debug))]
 pub enum LDIncDecInputU8 {
     /// Load into (*HL) from register (A) and increment (LDI) or decrement (LDD) register (HL) 
     HLA,
@@ -156,9 +169,43 @@ pub type LDDInputU8 = LDIncDecInputU8;
 /// the memory bus.
 /// 
 /// [`LoadU16Cmd::LD`]: super::LoadU16Cmd::LD
+#[cfg_attr(test, derive(Debug))]
 pub enum LDInputU16 {
     /// Load into (*rr) from (*nn)
     RRNN(RegisterU16),
     /// Load into direct SP from direct HL; (note the lack of deref/parenthesis)
     SPHL
+}
+
+/// Type alias for a byte -- signals which bit the BitCmd should operate on
+pub type U3 = u8;
+
+/// The input type for [`BitCmd`]. The [`BitOperator`] signals which bit for the command
+/// to operate on. The [`DoubleInputU8`] signals which register's (or *(HL)'s) bits to operate on.
+#[cfg_attr(test, derive(Debug))]
+pub struct BitInput(pub U3, pub DoubleInputU8);
+
+impl BitInput {
+    pub fn from_opcode(opcode: u8) -> Self {
+        eprintln!("FROM OPCODE RECEIVING: {opcode:#b}");
+        let reg_code = opcode & 0b0000_0111;
+        let bit_index = (opcode & 0b0011_1000) >> 3;
+        dbg!(bit_index);
+        eprintln!("{bit_index:#b}");
+        // let cmd_code = (opcode & 0b1100_0000) >> 6; /* I'll let macros do this since for better or worse that is how i have done it thus far */
+        
+        let reg_input = match reg_code {
+            0 => DoubleInputU8::Register(RegisterU8::B),
+            1 => DoubleInputU8::Register(RegisterU8::C),
+            2 => DoubleInputU8::Register(RegisterU8::D),
+            3 => DoubleInputU8::Register(RegisterU8::E),
+            4 => DoubleInputU8::Register(RegisterU8::H),
+            5 => DoubleInputU8::Register(RegisterU8::L),
+            6 => DoubleInputU8::Address,
+            7 => DoubleInputU8::Register(RegisterU8::A),
+            _ => unreachable!("Match statement enumerates all possible values for a 3-bit number")
+        };
+
+        Self(bit_index, reg_input)
+    }
 }

@@ -2,6 +2,7 @@ use super::input::*;
 // todo!("figure out why tf this works if mod input is private and im reexporting from super lmao")
 
 /// Load U8 command set
+#[cfg_attr(test, derive(Debug))]
 pub enum LoadU8Cmd {
     LD(LDInputU8),
     LDI(LDIInputU8),
@@ -9,6 +10,7 @@ pub enum LoadU8Cmd {
 }
 
 /// Load U16 command set
+#[cfg_attr(test, derive(Debug))]
 pub enum LoadU16Cmd {
     LD(LDInputU16),
     PUSH(InputU16),
@@ -16,6 +18,7 @@ pub enum LoadU16Cmd {
 }
 
 /// Arithmetical/Logical u8 command set
+#[cfg_attr(test, derive(Debug))]
 pub enum AritLogiU8Cmd {
     ADD(CompoundInputU8), 
     ADC(CompoundInputU8), 
@@ -32,6 +35,7 @@ pub enum AritLogiU8Cmd {
 }
 
 /// Arithmetical/Logical U16 command set
+#[cfg_attr(test, derive(Debug))]
 pub enum AritLogiU16Cmd {
     ADDHL(InputU16),
     INC(InputU16),
@@ -41,6 +45,7 @@ pub enum AritLogiU16Cmd {
 }
 
 /// Rotate & Shift command set
+#[cfg_attr(test, derive(Debug))]
 pub enum RSCmd {
     RLCA, // 07 - this one is incorrectly spelled "RRLA" on the Rust Guidebook
     RLA,
@@ -57,14 +62,15 @@ pub enum RSCmd {
 }
 
 /// Single Bit Operation command set
+#[cfg_attr(test, derive(Debug))]
 pub enum BitCmd {
-    // todo!("Figure all this shit out in terms of arg passing. I believe I already implemented in the CPU a general handler for these tho.")
-    BIT(u8, InputU8), // todo!()
-    RES(u8, InputU8), // todo!()
-    SET(u8, InputU8), // todo!()
+    BIT(BitInput), // todo!()
+    RES(BitInput), // todo!()
+    SET(BitInput), // todo!()
 }
 
 // CPU Control command set
+#[cfg_attr(test, derive(Debug))]
 pub enum CtrCmd {
     // todo!("Implement")
     CCF,
@@ -76,6 +82,7 @@ pub enum CtrCmd {
     EI, // todo!()
 }
 
+#[cfg_attr(test, derive(Debug))]
 pub enum JmpCmd {
     // todo!("Figure out inputs & implement")
     JP(JPInput),

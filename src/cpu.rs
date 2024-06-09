@@ -809,41 +809,41 @@ impl CPU {
             }
             
             Instruction::SingleBit(command) => {
-                match command {
-                    BitCmd::BIT(bit, InputU8(target)) => {
-                        match target {
-                            RegisterU8::A => self.bit(bit, self.registers.a),
-                            RegisterU8::B => self.bit(bit, self.registers.b),
-                            RegisterU8::C => self.bit(bit, self.registers.c),
-                            RegisterU8::D => self.bit(bit, self.registers.d),
-                            RegisterU8::E => self.bit(bit, self.registers.e),
-                            RegisterU8::H => self.bit(bit, self.registers.h),
-                            RegisterU8::L => self.bit(bit, self.registers.l),
-                        }
-                    }
-                    BitCmd::RES(bit, InputU8(target)) => {
-                        match target {
-                            RegisterU8::A => self.registers.a = self.res(bit, self.registers.a),
-                            RegisterU8::B => self.registers.b = self.res(bit, self.registers.b),
-                            RegisterU8::C => self.registers.c = self.res(bit, self.registers.c),
-                            RegisterU8::D => self.registers.d = self.res(bit, self.registers.d),
-                            RegisterU8::E => self.registers.e = self.res(bit, self.registers.e),
-                            RegisterU8::H => self.registers.h = self.res(bit, self.registers.h),
-                            RegisterU8::L => self.registers.l = self.res(bit, self.registers.l),
-                        }
-                    }
-                    BitCmd::SET(bit, InputU8(target)) => {
-                        match target {
-                            RegisterU8::A => self.registers.a = self.set(bit, self.registers.a),
-                            RegisterU8::B => self.registers.b = self.set(bit, self.registers.b),
-                            RegisterU8::C => self.registers.c = self.set(bit, self.registers.c),
-                            RegisterU8::D => self.registers.d = self.set(bit, self.registers.d),
-                            RegisterU8::E => self.registers.e = self.set(bit, self.registers.e),
-                            RegisterU8::H => self.registers.h = self.set(bit, self.registers.h),
-                            RegisterU8::L => self.registers.l = self.set(bit, self.registers.l),
-                        }
-                    }
-                }
+                // match command {
+                //     BitCmd::BIT(BitInput(bit, target)) => {
+                //         match target {
+                //             RegisterU8::A => self.bit(bit, self.registers.a),
+                //             RegisterU8::B => self.bit(bit, self.registers.b),
+                //             RegisterU8::C => self.bit(bit, self.registers.c),
+                //             RegisterU8::D => self.bit(bit, self.registers.d),
+                //             RegisterU8::E => self.bit(bit, self.registers.e),
+                //             RegisterU8::H => self.bit(bit, self.registers.h),
+                //             RegisterU8::L => self.bit(bit, self.registers.l),
+                //         }
+                //     }
+                //     BitCmd::RES(BitInput(bit, target)) => {
+                //         match target {
+                //             RegisterU8::A => self.registers.a = self.res(bit, self.registers.a),
+                //             RegisterU8::B => self.registers.b = self.res(bit, self.registers.b),
+                //             RegisterU8::C => self.registers.c = self.res(bit, self.registers.c),
+                //             RegisterU8::D => self.registers.d = self.res(bit, self.registers.d),
+                //             RegisterU8::E => self.registers.e = self.res(bit, self.registers.e),
+                //             RegisterU8::H => self.registers.h = self.res(bit, self.registers.h),
+                //             RegisterU8::L => self.registers.l = self.res(bit, self.registers.l),
+                //         }
+                //     }
+                //     BitCmd::SET(BitInput(bit, target)) => {
+                //         match target {
+                //             RegisterU8::A => self.registers.a = self.set(bit, self.registers.a),
+                //             RegisterU8::B => self.registers.b = self.set(bit, self.registers.b),
+                //             RegisterU8::C => self.registers.c = self.set(bit, self.registers.c),
+                //             RegisterU8::D => self.registers.d = self.set(bit, self.registers.d),
+                //             RegisterU8::E => self.registers.e = self.set(bit, self.registers.e),
+                //             RegisterU8::H => self.registers.h = self.set(bit, self.registers.h),
+                //             RegisterU8::L => self.registers.l = self.set(bit, self.registers.l),
+                //         }
+                //     }
+                // }
                 self.pc.wrapping_add(2) // all BitCmd variants are prefixed so the PC-increment can go here as an umbrella/dedupe
             }
 
@@ -1178,7 +1178,8 @@ impl CPU {
 
 // MEMORY MANIPULATION / CPU-LOOP / ENCODING INSTRUCTIONS TO BE EXECUTED impl-block
 impl CPU {
-    fn step(&mut self) {
+    // todo!("not sure if there is any point in propagating errors but its in place somewhat for now here")
+    fn step(&mut self) -> Result<(), instruction::InstructionBuildError> {
         // todo!("cover all instruction reading styles")
         let mut instruction_byte = self.bus.read_byte(self.pc); 
         let prefixed = instruction_byte == 0xCB;
@@ -1186,18 +1187,12 @@ impl CPU {
             instruction_byte = self.bus.read_byte(self.pc + 1);
         }
     
-        let next_pc = match Instruction::from_byte(instruction_byte, prefixed) {
-            Some(instruction) => self.execute(instruction),
-            None => {
-                panic!(
-                    "Unknown instruction received: 0x{}{:X}", 
-                    if prefixed { "CB" } else { "" },
-                    instruction_byte
-                )
-            }
-        };
+        let instruction = Instruction::from_byte(instruction_byte, prefixed)?;
+        let next_pc = self.execute(instruction);
         
         self.pc = next_pc;
+        
+        Ok(())
     }
 
     /// Reads the byte immediately after the opcode in memory.

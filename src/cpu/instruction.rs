@@ -1,6 +1,8 @@
 mod input;
 mod commands;
 mod helper_macros;
+#[cfg(test)]
+mod tests;
 
 use helper_macros::*;
 use crate::cpu::register::RegisterU8::{ A, B, C, D, E, H, L };
@@ -18,6 +20,16 @@ use crate::cpu::register::RegisterU16::{ BC, DE, HL, SP, AF };
 pub use input::*;
 pub use commands::*;
 
+#[derive(Debug)]
+pub struct InstructionBuildError(String);
+impl std::fmt::Display for InstructionBuildError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Display::fmt(&self.0, f)
+    }
+}
+impl std::error::Error for InstructionBuildError {}
+
+
 /// Enumeration of all CPU Instructions that categorizes all instructions into groups/types
 /// 
 /// Each group/type contains a nested enum of all possible commands for that group/type
@@ -28,6 +40,7 @@ pub use commands::*;
 ///
 /// I could flatten this for no change in functionality, but I accept this 
 /// level of nesting for organizational/reference purposes.
+#[cfg_attr(test, derive(Debug))]
 pub enum Instruction {
     Load8Bit(LoadU8Cmd),
     Load16Bit(LoadU16Cmd),
@@ -39,8 +52,10 @@ pub enum Instruction {
     Jump(JmpCmd)
 }
 
+type InstructionBuildResult = Result<Instruction, InstructionBuildError>;
+
 impl Instruction {
-    pub fn from_byte(byte: u8, prefixed: bool) -> Option<Self> {
+    pub fn from_byte(byte: u8, prefixed: bool) -> InstructionBuildResult {
         if prefixed {
             Self::from_byte_prefixed(byte)
         } else {
@@ -48,7 +63,7 @@ impl Instruction {
         }
     }
 
-    pub fn from_byte_not_prefixed(byte: u8) -> Option<Self> {
+    pub fn from_byte_not_prefixed(byte: u8) -> InstructionBuildResult {
 
         /* Comment Guide (note it's not an exhaustive/perfectly enunciated syntax--
             --i.e. use some intuition/critical thinking on some outside the exact format :P) */
@@ -407,12 +422,12 @@ impl Instruction {
         
 /* END || Jump Commands || END */
 
-            _ => None // either unimplemented or unrecognized
+            unmatched_opcode => build_err!(unmatched_opcode)
         }
     }
 
     /// NOTE, only RotateShift & SingleBit contain prefixed commands
-    pub fn from_byte_prefixed(byte: u8) -> Option<Self> {
+    pub fn from_byte_prefixed(byte: u8) -> InstructionBuildResult {
         match byte {
 /* START || Rotate & Shift Commands || START */
             // RLC, r | CB 0x | 8 | z00c | rotate left 
@@ -507,9 +522,20 @@ impl Instruction {
 /* END || Rotate & Shift Commands || END */
 
 /* START || Single Bit Operation Commands || START */
-            // todo!()
+            // BIT, n, r | CB xx | 8 | z01- | test bit n 
+            // BIT, n, (HL) | CB xx | 12 | z01- | test bit n 
+            opcode if opcode & 0b1100_0000 == 0b0100_0000 => single_bit_impl!(BitCmd::BIT, BitInput::from_opcode(opcode)), 
+
+            // RES, n, r | CB xx | 8 | ---- | reset bit n 
+            // RES, n, (HL) | CB xx | 16 | ---- | reset bit n 
+            opcode if opcode & 0b1100_0000 == 0b1000_0000 => single_bit_impl!(BitCmd::RES, BitInput::from_opcode(opcode)), 
+
+            // SET, n, r | CB xx | 8 | ---- | set bit n 
+            // SET, n, (HL) | CB xx | 16 | ---- | set bit n 
+            opcode if opcode & 0b1100_0000 == 0b1100_0000 => single_bit_impl!(BitCmd::SET, BitInput::from_opcode(opcode)), 
 /* END || Single Bit Operation Commands || END */
-            _ => None // either unimplemented or unrecognized
+
+            unmatched_opcode => build_err!(0xCB00 | (unmatched_opcode as u16))
         }
     }
 }

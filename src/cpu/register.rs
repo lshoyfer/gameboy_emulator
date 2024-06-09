@@ -6,6 +6,7 @@ mod tests;
 // They must remain in place unless I change the arithmetic to some very large match branches
 
 // non-spec (for this codebase) INVARIANT: must be repr(C) for reliable ordering of fields to their definition order
+#[cfg_attr(test, derive(Debug))]
 #[repr(C)]
 pub struct Registers {
     pub a: u8,
@@ -60,7 +61,8 @@ impl Registers {
 }
 
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Copy, Clone)]
+#[cfg_attr(test, derive(Debug))]
 pub struct FlagRegister {
     pub zero: bool,
     pub subtract: bool,
@@ -100,11 +102,13 @@ impl From<u8> for FlagRegister {
 */
 
 /// Consists of the major seven 8-bit registers (F is notably excluded which is what it is but it is never going to be matched in a match arm so...)
+#[cfg_attr(test, derive(Debug))]
 pub enum RegisterU8 {
     A, B, C, D, E, H, L,
 }
 
 /// Consists of the major 5 compound/16-bit registers including the stack pointer
+#[cfg_attr(test, derive(Debug))]
 pub enum RegisterU16 {
     BC, DE, HL, SP, AF
 }
