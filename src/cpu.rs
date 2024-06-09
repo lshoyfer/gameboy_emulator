@@ -809,41 +809,68 @@ impl CPU {
             }
             
             Instruction::SingleBit(command) => {
-                // match command {
-                //     BitCmd::BIT(BitInput(bit, target)) => {
-                //         match target {
-                //             RegisterU8::A => self.bit(bit, self.registers.a),
-                //             RegisterU8::B => self.bit(bit, self.registers.b),
-                //             RegisterU8::C => self.bit(bit, self.registers.c),
-                //             RegisterU8::D => self.bit(bit, self.registers.d),
-                //             RegisterU8::E => self.bit(bit, self.registers.e),
-                //             RegisterU8::H => self.bit(bit, self.registers.h),
-                //             RegisterU8::L => self.bit(bit, self.registers.l),
-                //         }
-                //     }
-                //     BitCmd::RES(BitInput(bit, target)) => {
-                //         match target {
-                //             RegisterU8::A => self.registers.a = self.res(bit, self.registers.a),
-                //             RegisterU8::B => self.registers.b = self.res(bit, self.registers.b),
-                //             RegisterU8::C => self.registers.c = self.res(bit, self.registers.c),
-                //             RegisterU8::D => self.registers.d = self.res(bit, self.registers.d),
-                //             RegisterU8::E => self.registers.e = self.res(bit, self.registers.e),
-                //             RegisterU8::H => self.registers.h = self.res(bit, self.registers.h),
-                //             RegisterU8::L => self.registers.l = self.res(bit, self.registers.l),
-                //         }
-                //     }
-                //     BitCmd::SET(BitInput(bit, target)) => {
-                //         match target {
-                //             RegisterU8::A => self.registers.a = self.set(bit, self.registers.a),
-                //             RegisterU8::B => self.registers.b = self.set(bit, self.registers.b),
-                //             RegisterU8::C => self.registers.c = self.set(bit, self.registers.c),
-                //             RegisterU8::D => self.registers.d = self.set(bit, self.registers.d),
-                //             RegisterU8::E => self.registers.e = self.set(bit, self.registers.e),
-                //             RegisterU8::H => self.registers.h = self.set(bit, self.registers.h),
-                //             RegisterU8::L => self.registers.l = self.set(bit, self.registers.l),
-                //         }
-                //     }
-                // }
+                match command {
+                    BitCmd::BIT(BitInput(bit, target)) => {
+                        match target {
+                            DoubleInputU8::Register(register) => {
+                                match register {
+                                    RegisterU8::A => self.bit(bit, self.registers.a),
+                                    RegisterU8::B => self.bit(bit, self.registers.b),
+                                    RegisterU8::C => self.bit(bit, self.registers.c),
+                                    RegisterU8::D => self.bit(bit, self.registers.d),
+                                    RegisterU8::E => self.bit(bit, self.registers.e),
+                                    RegisterU8::H => self.bit(bit, self.registers.h),
+                                    RegisterU8::L => self.bit(bit, self.registers.l),
+                                }
+                            }
+                            DoubleInputU8::Address => {
+                                let address = self.registers.get_hl();
+                                self.bit(bit, self.bus.read_byte(address));
+                            }
+                        }
+                    }
+                    BitCmd::RES(BitInput(bit, target)) => {
+                        match target {
+                            DoubleInputU8::Register(register) => {
+                                match register {
+                                    RegisterU8::A => self.registers.a = self.res(bit, self.registers.a),
+                                    RegisterU8::B => self.registers.b = self.res(bit, self.registers.b),
+                                    RegisterU8::C => self.registers.c = self.res(bit, self.registers.c),
+                                    RegisterU8::D => self.registers.d = self.res(bit, self.registers.d),
+                                    RegisterU8::E => self.registers.e = self.res(bit, self.registers.e),
+                                    RegisterU8::H => self.registers.h = self.res(bit, self.registers.h),
+                                    RegisterU8::L => self.registers.l = self.res(bit, self.registers.l),
+                                }
+                            }
+                            DoubleInputU8::Address => {
+                                let address = self.registers.get_hl();
+                                let result = self.res(bit, self.bus.read_byte(address));
+                                self.bus.write_byte(address, result);
+                            }
+                            
+                        }
+                    }
+                    BitCmd::SET(BitInput(bit, target)) => {
+                        match target {
+                            DoubleInputU8::Register(register) => {
+                                match register {
+                                    RegisterU8::A => self.registers.a = self.set(bit, self.registers.a),
+                                    RegisterU8::B => self.registers.b = self.set(bit, self.registers.b),
+                                    RegisterU8::C => self.registers.c = self.set(bit, self.registers.c),
+                                    RegisterU8::D => self.registers.d = self.set(bit, self.registers.d),
+                                    RegisterU8::E => self.registers.e = self.set(bit, self.registers.e),
+                                    RegisterU8::H => self.registers.h = self.set(bit, self.registers.h),
+                                    RegisterU8::L => self.registers.l = self.set(bit, self.registers.l),
+                                }
+                            }
+                            DoubleInputU8::Address => {
+                                let address = self.registers.get_hl();
+                                let result = self.set(bit, self.bus.read_byte(address));
+                                self.bus.write_byte(address, result);
+                            }
+                        }
+                    }
+                }
                 self.pc.wrapping_add(2) // all BitCmd variants are prefixed so the PC-increment can go here as an umbrella/dedupe
             }
 
@@ -1032,20 +1059,12 @@ impl CPU {
     }
 
     fn res(&mut self, bit: u8, value: u8) -> u8 {
-        if (value & (0b1 << bit)) == (0b1 << bit) {
-            value - (0b1 << bit)
-        } else {
-            value
-        }
+        value & !(0b1 << bit) 
         // all flags are not affected
     }
 
     fn set(&mut self, bit: u8, value: u8) -> u8 {
-        if (value & (0b1 << bit)) != (0b1 << bit) {
-            value + (0b1 << bit)
-        } else {
-            value
-        }
+        value | (0b1 << bit)
         // all flags are not affected
     }
 
